@@ -3,7 +3,50 @@ from collections import OrderedDict
 import re
 import unicodedata
 
-class Citation:
+import json
+import os
+
+master_config = {}
+
+class ImportedClass:
+    @classmethod
+    def read_config_dat(cls, data_source_file=None):
+        if not data_source_file:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            data_source_file = os.path.join(script_dir, "config.dat")
+
+        with open(data_source_file, "r", encoding="utf-8") as f:
+            config_data = json.load(f, object_pairs_hook=OrderedDict)
+
+        master_config = {}
+
+        for section in config_data:
+            for category_name, class_defs in section.items():
+                master_config[category_name] = []
+
+                for class_def in class_defs:
+                    class_fields = class_def.copy()
+
+                    # Determine class name
+                    name_key = next((k for k in class_fields if k.endswith("ClassName")), None)
+                    if not name_key:
+                        raise ValueError(f"No class name key found in {class_fields}")
+                    class_name = class_fields.pop(name_key)
+
+                    # Determine base class
+                    base_class_name = class_fields.pop("SubOf", "ImportedClass")
+                    base_class = BASE_CLASS_REGISTRY.get(base_class_name)
+                    if not base_class:
+                        raise ValueError(f"Unknown base class: {base_class_name}")
+
+                    # Create the class
+                    new_class = type(class_name, (base_class,), class_fields)
+                    master_config[category_name].append(new_class)
+
+class BaseLookup(ImportedClass):
+    pass
+
+class BaseCitation(ImportedClass):
 
     # Here to define the workings, but overridden in _init_
     exists = None
@@ -16,11 +59,6 @@ class Citation:
     _normalized = None
     _raw_text = None
     
-    # @classmethod
-    # def create_citations
-    #  This will read a config file, create a list of citation classes,
-    #  and then call each class's test_text() on the document text
-
     @classmethod
     def test_text(cls, text):
         # This method will return a list of citation class instances for this class
@@ -98,9 +136,18 @@ class Citation:
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self._raw_text}>"
 
+BASE_CLASS_REGISTRY = {
+    "ImportedClass": ImportedClass,
+    "CitationTypeBase": BaseCitation,
+    "LookupProviderBase": BaseLookup,
+    # Add more as needed
+}
+
 CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST = ['case_name', 'volume', 'reporter', 'page']
 
-class FederalCaseCitation(Citation):
+
+
+class FederalCaseCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (F\.(?:2d|3d|4th)) (\d+)"
     # regex = r"\b([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?), (\d+) (F\.(?:2d|3d|4th)) (\d+)"
     # regex = r"\b([A-Z][\w\s.,&'()\-]+? v\. [A-Z][\w\s.,&'()\-]+?), (\d+) (F\.(?:2d|3d|4th)) (\d+)"
@@ -108,42 +155,42 @@ class FederalCaseCitation(Citation):
     match_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
     normalizing_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
 
-class DistrictCourtCitation(Citation):
+class DistrictCourtCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (F\. Supp\. 2d) (\d+)"
     match_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
     normalizing_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
     
-class WestlawCitation(Citation):
+class WestlawCitation(BaseCitation):
     regex = r"(\d{4}) WL (\d+)"
     match_fields = ['year', 'wl_number']
     normalizing_fields = ['year', 'wl_number']
 
-class StateAppellateCitation(Citation):
+class StateAppellateCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d{4}) IL App \((\d+[a-z]*)\) (\d+[-U]*)"
     match_fields = ['case_name', 'year', 'district', 'case_number']
     normalizing_fields = ['case_name', 'year', 'jurisdiction', 'case_number']
 
-class StateCourtCitation(Citation):
+class StateCourtCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d{4}) ([A-Z][a-z]+\.) App\. ?,? ([A-Za-z]+\. \d{1,2}, \d{4})"
     match_fields = ['case_name', 'year', 'court', 'date']
     normalizing_fields = ['case_name', 'year', 'court', 'date']
 
-class SupremeCourtCitation(Citation):
+class SupremeCourtCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (U\.S\.) (\d+)"
     match_fields = ['case_name', 'volume', 'reporter', 'page']
     normalizing_fields = ['case_name', 'volume', 'reporter', 'page']
     
-class FederalSupplementCitation(Citation):
+class FederalSupplementCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (F\. Supp\.) (\d+)"
     match_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
     normalizing_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
 
-class BankruptcyCitation(Citation):
+class BankruptcyCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (B\.R\.) (\d+)\b"
     match_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
     normalizing_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
 
-class RegionalReporterCitation(Citation):
+class RegionalReporterCitation(BaseCitation):
     regex = r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) ([A-Z]\.3d) (\d+)"
     match_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
     normalizing_fields = CASE_NAME_VOLUME_REPORTER_PAGE_FIELD_LIST[:]
@@ -160,6 +207,8 @@ list_of_types_to_test_for = [
 #    RegionalReporterCitation,
 ]
 
+ImportedClass.read_config_dat()
+
 # Path to the test file
 testfile = './testdata.txt'
 print('\n' * 20)
@@ -167,8 +216,7 @@ print('----------' * 6)
 print('')
 print(f'Testing file: {testfile}')
 # Read the test file
-with open(testfile, 'r', encoding='utf-8') as f:
-    text = f.read()
+
 text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
 text = re.sub(r'\s+', ' ', text)
 print(f'Testing file: Read and filter complete. Length {len(text)}')
@@ -178,12 +226,12 @@ print('-----------------')
 result_text = ''
 
 if True:
-    for citation_type in list_of_types_to_test_for:
-        print(f'{citation_type.__name__} regex="{citation_type.regex}"')
-        results = citation_type.test_text(text)
+    for CitationType in master_config["CitationTypes"]:
+        print(f'{CitationType.__name__} regex="{CitationType.regex}"')
+        results = CitationType.test_text(text)
         if results:
             for item in results:
-                result_text += f"{citation_type.__name__} Match: {item}\n"
+                result_text += f"{CitationType.__name__} Match: {item}\n"
                 print(f'FOUND {item}')
         else:
             print(f'NO FINDS ON regex={regex}')
