@@ -1,16 +1,72 @@
 [
-    { "CitationTypes": 
+    { "CitationClasses": 
         [
             {
                 "CitationClassName": "FederalCaseCitation",
                 "SubOf": "BaseCitation",
-                "regex": r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (F\.(?:2d|3d|4th)) (\d+)",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
                 "match_fields": ["case_name", "volume", "reporter", "page"],
                 "normalizing_fields": ["case_name", "volume", "reporter", "page"]
             },
+            {
+                "CitationClassName": "DistrictCourtCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\. Supp\\. 2d) (\\d+)",
+                "match_fields": ["case_name", "volume", "reporter", "page"],
+                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+            },
+            {
+                "CitationClassName": "WestlawCitation",
+                "SubOf": "BaseCitation",
+                "regex": "(\\d{4}) WL (\\d+)",
+                "match_fields": ["year", "wl_number"],
+                "normalizing_fields": ["year", "wl_number"]
+            },
+            {
+                "CitationClassName": "StateAppellateCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) IL App \\((\\d+[a-z]*)\\) (\\d+[-U]*)",
+                "match_fields": ["case_name", "year", "district", "case_number"],
+                "normalizing_fields": ["case_name", "year", "jurisdiction", "case_number"]
+            },
+            {
+                "CitationClassName": "StateCourtCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) ([A-Z][a-z]+\\.) App\\. ?,? ([A-Za-z]+\\. \\d{1,2}, \\d{4})",
+                "match_fields": ["case_name", "year", "court", "date"],
+                "normalizing_fields": ["case_name", "year", "court", "date"]
+            },
+            {
+                "CitationClassName": "SupremeCourtCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (U\\.S\\.) (\\d+)",
+                "match_fields": ["case_name", "volume", "reporter", "page"],
+                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+            },
+            {
+                "CitationClassName": "FederalSupplementCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\. Supp\\.) (\\d+)",
+                "match_fields": ["case_name", "volume", "reporter", "page"],
+                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+            },
+            {
+                "CitationClassName": "BankruptcyCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (B\\.R\\.) (\\d+)\\b",
+                "match_fields": ["case_name", "volume", "reporter", "page"],
+                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+            },
+            {
+                "CitationClassName": "RegionalReporterCitation",
+                "SubOf": "BaseCitation",
+                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) ([A-Z]\\.3d) (\\d+)",
+                "match_fields": ["case_name", "volume", "reporter", "page"],
+                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+            }
         ]
     },
-    { 'LookupProviders': 
+    { "LookupClassess": 
         [
             {
                 "LookupClassName": "CourtListener",
