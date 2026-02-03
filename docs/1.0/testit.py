@@ -11,6 +11,7 @@ master_config = {}
 class ImportedClass:
     @classmethod
     def read_config_dat(cls, data_source_file=None):
+
         if not data_source_file:
             script_dir = os.path.dirname(os.path.abspath(__file__))
             data_source_file = os.path.join(script_dir, "config.dat")
@@ -18,6 +19,7 @@ class ImportedClass:
         with open(data_source_file, "r", encoding="utf-8") as f:
             config_data = json.load(f, object_pairs_hook=OrderedDict)
 
+        global master_config
         master_config = {}
 
         for section in config_data:
@@ -215,10 +217,16 @@ print('\n' * 20)
 print('----------' * 6)
 print('')
 print(f'Testing file: {testfile}')
-# Read the test file
 
+# Read the test file
+with open(testfile, "r", encoding="utf-8") as f:
+    text = f.read()
+
+# normalize it
 text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
 text = re.sub(r'\s+', ' ', text)
+
+# and start the scan:
 print(f'Testing file: Read and filter complete. Length {len(text)}')
 print('')
 print('Now processing file...')

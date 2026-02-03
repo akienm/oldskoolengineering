@@ -1,10 +1,11 @@
 import os
 import requests
 
-key = os.getenv("COURTLISTENER_KEY", None)
+
 
 comment='Session key'
 def lookup_structured_citation():
+    key = os.getenv("COURTLISTENER_KEY", None)
     url = "https://www.courtlistener.com/api/rest/v4/citation-lookup/"
     headers = {
         "Accept": "application/json",
