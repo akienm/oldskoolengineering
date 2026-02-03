@@ -1,0 +1,26 @@
+[
+    { "CitationTypes": 
+        [
+            {
+                "CitationClassName": "FederalCaseCitation",
+                "SubOf": "BaseCitation",
+                "regex": r"\*?([\w\s.,&'()\-]+? v\. [\w\s.,&'()\-]+?)\*?, (\d+) (F\.(?:2d|3d|4th)) (\d+)",
+                "match_fields": ["case_name", "volume", "reporter", "page"],
+                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+            },
+        ]
+    },
+    { 'LookupProviders': 
+        [
+            {
+                "LookupClassName": "CourtListener",
+                "SubOf": "BaseLookup",
+                "CitationURL": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
+                "EnvKeyName": "COURTLISTENER_KEY",
+                "ExpectedFields": ["case_name", "volume", "reporter", "page"],
+                "XOR": ["case_name", "reporter"]
+            }
+        ]
+    }
+]
+

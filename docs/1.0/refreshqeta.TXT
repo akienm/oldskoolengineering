@@ -1,0 +1,2906 @@
+#!/usr/bin/env bash
+
+
+
+################################################################################
+################################################################################
+# /Users/akien/src/test-framework/testframework/bin/module.qeta_env_setup
+################################################################################
+################################################################################
+
+#!/usr/bin/env bash
+
+export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+
+################################################################################
+# Module:
+#   module.qeta_env_setup
+#
+# Purpose:
+#   sets up environment variables, directories, prompt, path, homes, aliases, etc
+#
+# Notes:
+#   this is called from all over the place
+#
+################################################################################
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_vars_for_dirs
+#
+# Purpose:
+#   sets up environment vars that point to directories
+#
+# TODO: make a preferences file
+#
+################################################################################
+test -z "${WORKSPACE}" && export WORKSPACE="${HOME}"
+test -z "${QETA_HOME}" && export QETA_HOME="${WORKSPACE}"
+test -z "${QETA_SRC}" && export QETA_SRC="${WORKSPACE}/src"
+test -z "${QETA_BIN}" && export QETA_BIN="${WORKSPACE}/src/test-framework/testframework/bin"
+test -z "${QETA_FRAMEWORK}" && export QETA_FRAMEWORK="${WORKSPACE}/framework"
+test -z "${QETA_TESTS}" && export QETA_TESTS="${WORKSPACE}/src/test-common/testcommon/tests"
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_aliases
+#
+# Purpose:
+#   sets up aliases used in the framework
+#
+# TODO: Linux issues? i don't think so, but...
+#
+################################################################################
+alias sourceifpresent="source ${QETA_BIN}/sourceifpresent"
+
+alias framework="cd ${QETA_FRAMEWORK}"
+alias localdev="cd ${QETA_SRC}/local-dev"
+alias testcommon="cd ${QETA_SRC}/test-common/testcommon"
+alias testframework="cd ${QETA_SRC}/test-framework/testframework/bin"
+
+alias desktop="export SELENIUM_SESSION=desktop"
+alias sauce="export SELENIUM_SESSION=sauce"
+
+alias loadset="source ${QETA_BIN}/loadset"
+alias loadprev="source ${QETA_BIN}/loadprev"
+alias clearset="source ${QETA_BIN}/clearset"
+
+alias gototest="cd \${SELENIUM_PATH}"
+alias gotologs="cd ${QETA_FRAMEWORK}/logs"
+
+alias 24m="export QETA_COLORTERM=24m"
+alias setcolor="source ${QETA_BIN}/setcolor"
+
+# this removes an old git proxy
+alias git=foo
+unalias git
+
+################################################################################
+# Section:
+#   setup_qeta_environment_dirs
+#
+# Purpose:
+#   create directories
+#
+################################################################################
+mkdir -p "${QETA_FRAMEWORK}"
+mkdir -p "${QETA_FRAMEWORK}/environment"
+mkdir -p "${QETA_FRAMEWORK}/environment.host"
+mkdir -p "${QETA_FRAMEWORK}/local_data"
+mkdir -p "${QETA_FRAMEWORK}/logs"
+mkdir -p "${QETA_FRAMEWORK}/user"
+mkdir -p "${QETA_SRC}/log_archive"
+mkdir -p "${QETA_SRC}"
+
+
+################################################################################
+# Method:
+#   fixpath
+#
+# Purpose:
+#   cleans up path, removes duplicates, verifies that each dir exists, adds
+#   any required ones, adds testframework/bin to the front of the list
+#
+# Arguments:
+#   $1 == -i = internal call, do not perform source module.qeta_env_setup
+#
+# Notes:
+#   implements as a bash function specifically so it can be called even if
+#   the path is screwed up.
+#
+# TODO: Linux issues?
+# TODO: android sdk on linux?
+#
+################################################################################
+function fixpath {
+    if [ ! ":$1" == ":-i" ] ; then
+        test -z "${WORKSPACE}" && export WORKSPACE="${HOME}"
+        source "${WORKSPACE}/src/test-framework/testframework/bin/module.qeta_env_setup"
+    fi
+
+    ################################################################################
+    # Method:
+    #   addpath
+    #
+    # Purpose:
+    #   verifies and adds one folder
+    #
+    # Arguments:
+    #   path segment to test
+    #
+    # Returns:
+    #   modifies addpath_result
+    #
+    ################################################################################
+    function addpath() {
+        local new_entry="$1"
+        if [ -d "${new_entry}" ] ; then
+            if [[ "${new_entry}" =~ \ |\' ]] ; then
+                addpath_result+=":\"${new_entry}\""
+            else
+                addpath_result+=":${new_entry}"
+            fi
+        fi
+    }
+
+    addpath_result=""
+
+    # this is the place to add path members
+    addpath "${QETA_BIN}"
+    addpath "${QETA_HOME}/.virtualenvs/bin"
+    addpath "${QETA_HOME}/bin"
+    addpath "/usr/local/opt/python/libexec/bin"
+    addpath "/usr/local/bin"
+    addpath "/usr/local/sbin"
+    addpath "/opt/local/bin"
+    addpath "/opt/local/sbin"
+    addpath "/usr/bin"
+    addpath "/usr/sbin"
+    addpath "/bin"
+    addpath "/sbin"
+    addpath "/opt/X11/bin"
+    addpath "${JAVA_HOME}/bin"
+    addpath "${JAVA_HOME}/db/bin"
+    addpath "${JAVA_HOME}/jre/bin"
+    addpath "${QETA_HOME}/Library/Android/sdk/platform-tools"
+    addpath "${QETA_HOME}/Library/Android/sdk/tools"
+    addpath "${QETA_HOME}/.nexustools"
+    addpath "/usr/local/games"
+    addpath "/usr/games"
+    addpath "${PATH}"
+
+    addpath_result="${addpath_result//\~/${QETA_HOME}}"
+    export PATH="$(${QETA_BIN}/optimizepath ${addpath_result})"
+}
+export -f fixpath
+
+
+################################################################################
+# Function:
+#   sourceifpresent
+#
+# Purpose:
+#   sources the file if it is present
+#
+# Arguments:
+#   $1 string name of file to source
+#
+# Raises:
+#   nothing, fails silently by design
+#
+################################################################################
+function sourceifpresent() {
+    local source_if_present_target
+    local entry
+
+    source_if_present_target="${1}"
+
+    if [ -f "${source_if_present_target}" ] ; then
+        . "${source_if_present_target}"
+    fi
+
+    if [ -d  "${source_if_present_target}" ] ; then
+        directory_entries=$(ls "${source_if_present_target}")
+
+        for entry in $directory_entries; do
+            . "${source_if_present_target}/${entry}"
+        done
+    fi
+}
+export -f sourceifpresent
+
+
+################################################################################
+# Function:
+#   contains
+#
+# Purpose:
+#   akien's lazy string compare
+#
+# Arguments:
+#   $1 string - superstring
+#   $2 string - substring
+#
+# Returns:
+#   result code 0 = found
+#   result code 1 = not found
+#
+# Raises:
+#   nothing
+#
+################################################################################
+function contains() {
+    [[ "$1" = *"$2"* ]]
+    return $?
+}
+export -f contains
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_bash_completion
+#
+# Purpose:
+#   calls various bash completion code if found
+#
+# Note:
+#   i was unable to make sourceifpresent work for the 4 lines below
+#   i kept getting broken pipe
+#   after 15 mins, i gave up, set it back to this way, and moved on
+#   2018-05-18 amm
+#
+################################################################################
+f="/usr/local/etc/bash_completion" ; [ -f "$f" ] && . "$f"
+f="${QETA_HOME}/bin/git-completion.bash" ; [ -f "$f" ] && . "$f"
+f="${QETA_HOME}/google-cloud-sdk/completion.bash.inc" ; [ -f "$f" ] && . "$f"
+f="${QETA_HOME}/google-cloud-sdk/path.bash.inc" ; [ -f "$f" ] && . "$f"
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_git_hooks
+#
+# Purpose:
+#   connect git hooks
+#
+################################################################################
+test ! -f "${QETA_SRC}/test-framework/.git/hooks/pre-commit" && ln -s "${QETA_SRC}/test-framework/tools/hooks/pre-commit" "${QETA_SRC}/test-framework/.git/hooks/pre-commit" > /dev/null 2>&1
+test ! -f "${QETA_SRC}/test-framework/.git/hooks/pre-commit" && ln -s "${QETA_SRC}/test-common/tools/hooks/pre-commit" "${QETA_SRC}/test-framework/.git/hooks/pre-commit" > /dev/null 2>&1
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_homes
+#
+# Purpose:
+#   sets up and connects home folders
+#
+# TODO: Linux issues?
+#
+################################################################################
+test -f "${QETA_HOME}/Library/Android/sdk/platform-tools/adb" && export ANDROID_HOME=${QETA_HOME}/Library/Android/sdk
+test -d /c/msys/1.0 && export MSYS_HOME=/c/msys/1.0
+test -f /usr/libexec/java_home && export JAVA_HOME=$(/usr/libexec/java_home)
+if [ -d "/usr/lib/jvm" ] ; then
+    test -d "/usr/lib/jvm/java-8-oracle" && export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
+    test -d "/usr/lib/jvm/java-9-oracle" && export JAVA_HOME="/usr/lib/jvm/java-9-oracle"
+    test -d "/usr/lib/jvm/java-10-oracle" && export JAVA_HOME="/usr/lib/jvm/java-10-oracle"
+    test -d "/usr/lib/jvm/java-11-oracle" && export JAVA_HOME="/usr/lib/jvm/java-11-oracle"
+    export DERBY_HOME="${JAVA_HOME}/db"
+    export J2REDIR="${JAVA_HOME}/jre"
+    export J2SDKDIR="${JAVA_HOME}"
+    export NODE_PATH="/usr/lib/nodejs:/usr/lib/node_modules:/usr/share/javascript"
+fi
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_vars_for_misc
+#
+# Purpose:
+#   sets up misc environment vars
+#
+# TODO: make a perferences file
+#
+################################################################################
+test -z "${QETA_LOG_TAGS}" && export QETA_LOG_TAGS=None
+test -z "${TERM}" && export TERM=xterm-256color
+
+
+################################################################################
+# Section:
+#   setup_qeta_environment_odds_and_ends
+#
+# Purpose:
+#   sets up aliases used in the framework
+#
+################################################################################
+if [ ! ":${DOCKER_CONTAINER}" == ":True" ] ; then
+    fixdocker
+    export QETA_USER="${USER}"
+    if [ -z "${QETA_JENKINS}" ] && [ -n "${JENKINS_HOME}" ] ; then
+        export QETA_JENKINS=True
+    else
+        export QETA_JENKINS=False
+    fi
+fi
+
+[ -z "$uid" ] && uid=$UID
+
+export EIGHTYPOUNDS="################################################################################"
+. "${QETA_BIN}/module.prompt"
+fixpath -i
+
+
+
+################################################################################
+################################################################################
+# /Users/akien/src/test-framework/testframework/bin/module.helpers
+################################################################################
+################################################################################
+
+#!/usr/bin/env bash
+
+################################################################################
+# Module:
+#   module.helpers
+#
+# Purpose:
+#   various library functions used by the rest of the code
+#
+################################################################################
+
+################################################################################
+# Method:
+#   BONK
+#
+# Purpose:
+#   just displays an unmissible message in the log output, used to flag
+#   an area so as to find it quickly in the log output.
+#
+# Arguments:
+#   none
+#
+# Returns:
+#   none
+#
+################################################################################
+function BONK() {
+    qlog debug  "BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK"
+    qlog debug  "BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK"
+    qlog debug  "BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK"
+    qlog debug  "BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK"
+    qlog debug  "BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK - BONK"
+}
+export -f BONK
+
+################################################################################
+# Method:
+#   removeme
+#
+# Purpose:
+#   remove a file if found. Use the regular user running into the container
+#
+# Arguments:
+#   $1 = filename
+#
+# Returns:
+#   - text to logfile
+#   - status code on exit
+#
+# Raises:
+#   a FAILED message to the log about the failure to delete the file
+#
+# Dependencies:
+#   module.logging
+#
+################################################################################
+function removeme {
+    local result="OK"
+    local status=0
+
+    if [ -e "${1}" ] ; then
+        if [ ":${USER}" == ":root" ] ; then
+            rm -rf "${1}"
+        else
+            sudo rm -rf "${1}"
+        fi
+
+        if [ ":$?" == ":0" ] ; then
+            result="deleted ${1} ok"
+        else
+            result="FAILED to delete file on ${1}!"
+            status=1
+        fi
+    fi
+    qlog debug "$ removeme $1 $result"
+    return $status
+}
+export -f removeme
+
+################################################################################
+# Method:
+#   splitstring
+#
+# Purpose:
+#   splits a string based on a splitting character
+#
+# Arguments:
+#   $1 = string to split
+#   $2 = string to split it with (delimiter)
+#
+# Returns:
+#   $splitstringresult
+#
+################################################################################
+function splitstring() {
+    local string_to_split=$1
+    local split_it_with=$2
+    local oldifs="{$IFS}"
+    IFS="${split_it_with}" read -rd '' -a splitstringresult <<< "$string_to_split"
+    IFS="${oldifs}"
+    export splitstringresult
+}
+export -f splitstring
+
+
+
+################################################################################
+################################################################################
+# /Users/akien/src/test-framework/testframework/bin/module.platform
+################################################################################
+################################################################################
+
+#!/usr/bin/env bash
+
+################################################################################
+# Module:
+#   module.platform
+#
+# Purpose:
+#   All functions for various linux platforms. for instance, contains
+#   if_mac, if_linux, os_detect, and everything else that may differ
+#   from mac to debian.
+#
+# Notes:
+#   this contains public interfaces that are specifically cross platform
+#   and then delegate responsibility to platform specific installers. eg.
+#   install_os_packages will call install_os_packages_mac or
+#   install_os_packages_linux.
+#
+#   eventually, this will hold:
+#   - os package install method (for all packages)
+#   - os package uninstall method (for all packages, forced)
+#   - updatelodalip
+#   - environment variables or other access to files who's paths
+#     eg Docker.App isn't the name under debian
+#   - attach keychain to git?
+#   - xcode
+#   - how we're going to deal with the bash_profile vs bashrc file
+#     prolly easiest to, on linux, just make .bash_profile just call a new .bashrc
+#
+################################################################################
+
+################################################################################
+# DISTRO SPECIFIC BEHAVIORS
+
+################################################################################
+# Method:
+#   os_detect
+#
+# Purpose:
+#   reports on the os variant
+#
+# Returns:
+#   "Mac", "Linux", or "UNKNOWN:$(uname -s)"
+#
+# Notes:
+#   thanks go to Alejandro ;)
+#
+################################################################################
+function os_detect() {
+    local unameResult="$(uname -s)"
+    case "${unameResult}" in
+        Linux*)  machine=Linux;;
+        Darwin*) machine=Mac;;
+        *)       machine="UNKNOWN:${unameResult}"
+    esac
+    echo "${machine}"
+}
+export -f os_detect
+
+################################################################################
+# Method:
+#   if_mac
+#
+# Purpose:
+#   runs the command string passed in only if running on osx
+#
+# Arguments:
+#   the command line to execute
+#
+# Returns:
+#   None
+#
+################################################################################
+function if_mac() {
+    if [ ":$(os_detect)" == ":Mac" ] ; then
+        $@
+    fi
+}
+export -f if_mac
+
+################################################################################
+# Method:
+#   if_linux
+#
+# Purpose:
+#   runs the command string passed in only if running on non-osx linux
+#
+# Arguments:
+#   the command line to execute
+#
+# Returns:
+#   None
+#
+################################################################################
+function if_linux() {
+    if [ ":$(os_detect)" == ":Linux" ] ; then
+        $@
+    fi
+}
+export -f if_linux
+
+################################################################################
+# PACKAGE MANAGEMENT
+
+################################################################################
+# Method:
+#   install_os_packages
+#
+# Purpose:
+#   installs the os packages required for docker, selenium, etc.
+#
+# Arguments:
+#   All arguments passed to platform specific handler
+#
+# Returns:
+#   nothing, tho messages from the package installer go to the logs
+#
+# Dependencies:
+#   module.logging
+#
+# Notes:
+#   platform independent front end, calls os specific handlers
+#
+################################################################################
+function install_os_packages() {
+    qlog quiet "install_os_packages $1 $2 $3 $4 $5 $6 $7 $8 $9"
+
+    case $(os_detect) in
+        Mac)
+            install_os_packages_mac $@
+            ;;
+        Linux)
+            install_os_packages_linux $@
+            ;;
+        *)
+            qlog fatal "quick! contact the automation team!\nunknown os $(os_detect)" 99
+            ;;
+    esac
+    qlog quiet "install_os_packages: Done"
+}
+export -f install_os_packages
+
+################################################################################
+# Method:
+#   install_git
+#
+# Purpose:
+#   installs git. this is required because fetch needs git in order
+#   to fetch the rest of the framework.
+#
+# Arguments:
+#   All arguments passed to platform specific handler
+#
+# Returns:
+#   none
+#
+# Dependencies:
+#   module.logging
+#
+# TODO: move this into the git call, to support late initialization
+#
+################################################################################
+function install_git() {
+    qlog quiet "install_git $1 $2 $3 $4 $5 $6 $7 $8 $9"
+
+    case $(os_detect) in
+        Mac)
+            install_git_mac $@
+            ;;
+        Linux)
+            install_git_linux $@
+            ;;
+        *)
+            qlog fatal "quick! contact the automation team!\nunknown os $(os_detect)" 99
+            ;;
+    esac
+    qlog quiet "install_git: Done"
+}
+
+################################################################################
+# Method:
+#   install_git_mac
+#
+# Purpose:
+#   installs git on osx. this is required because fetch needs git in order
+#   to fetch the rest of the framework.
+#
+# Dependencies:
+#   module.logging
+#
+# TODO: move this into the git call, to support late initialization
+#
+################################################################################
+function install_git_mac() {
+    brew_update
+    qcmd brew install git
+    qcmd brew link git
+}
+
+################################################################################
+# method:
+#   install_git_linux
+#
+# purpose:
+#   installs git on Debian-like distributions. This is required because fetch
+#   needs git in order to get the rest of the framework.
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   module.logging
+#
+#
+################################################################################
+function install_git_linux() {
+    qcmd sudo apt-get install -y git
+}
+
+function install_node() {
+    qlog print " "
+    qlog print "Installing nvm"
+    qcmd "curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | bash"
+    export NVM_DIR="$HOME/.nvm"
+    . "$NVM_DIR/nvm.sh"  # This loads nvm
+    . "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+    #Install the latest version with nvm install node
+    nvm install node
+
+    # Use the latest version with nvm use node
+    nvm use node
+}
+export -f install_node
+
+################################################################################
+# Method:
+#   brew_update
+#
+# Purpose:
+#   installs macos homebrew, updates it and so on. runs only once per day
+#
+# Dependencies:
+#   module.logging
+#
+# Notes:
+#   called by other mac package management in order to assure a known
+#   state on the package installer.
+#
+################################################################################
+function brew_update() {
+
+    if [ ! ":${___install_package_mac}" == ":True" ] ; then
+        qlog print "Validating homebrew installation..."
+
+        # now we check to see if we need to update brew today
+        # we do this only once per day because it's time consuming
+        qcmd [ ! -f "${QETA_FRAMEWORK}/local_data/brew_datestamp" ]
+        if [ ":${qcmd_result_code}" == ":0" ] ; then
+            qcmd mkdir -p "${QETA_FRAMEWORK}/local_data/"
+            qcmd "echo None > ${QETA_FRAMEWORK}/local_data/brew_datestamp"
+        fi
+
+        local brew_last_update="$(cat ${QETA_FRAMEWORK}/local_data/brew_datestamp)"
+        local brew_update_today="$(date +%0Y%0m%0d)"
+
+        qcmd [ ":${brew_last_update}" == ":${brew_update_today}" ]
+        if [ ":${qcmd_result_code}" == ":1" ] ; then
+            qlog print "brew updating, please stand by..."
+            qcmd echo "" | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+            qcmd brew update
+            qcmd brew upgrade
+            qcmd brew cask upgrade
+            qcmd brew cleanup
+            qlog print "brew update: done"
+            qcmd "echo $(date +%0Y%0m%0d) > ${QETA_FRAMEWORK}/local_data/brew_datestamp"
+        fi
+    fi
+    export ___install_package_mac="True"
+    qlog quiet "brew_update: Done"
+}
+export -f brew_update
+
+################################################################################
+# Method:
+#   install_os_packages_mac
+#
+# Purpose:
+#   Installs all os level packages for mac os (except git).
+#
+# Dependencies:
+#   module.logging
+#
+# Notes:
+#   verifies homebrew installed before installing packages (once per day)
+#
+################################################################################
+function install_os_packages_mac() {
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.brew
+    ################################################################################
+    qlog quiet "install_package_mac $1 $2 $3 $4 $5 $6 $7 $8 $9"
+    brew_update
+
+    # EACH OF THESE IS HERE TWICE BECAUSE WE HAD SOME ISSUE AT ONE POINT IN THE PAST WHERE
+    # ONE OF THESE DIDN'T WORK THE FIRST TIME, AND THIS WAS THE QUICK WORK AROUND WHICH WAS NEVER
+    # FURTHER DIAGNOSED - AMM 2019.07.22
+    qcmd brew install bash-completion
+    qcmd brew install bash-completion
+    qcmd brew install cask
+    qcmd brew install cask
+
+    qcmd brew cask install docker
+    qcmd brew cask install docker
+
+    qcmd brew install docker-compose
+    qcmd brew install docker-compose
+    qcmd brew link --overwrite docker-compose
+
+    qcmd brew cask install google-cloud-sdk
+    export PATH="/usr/bin:/usr/local/bin:$PATH"
+
+    qcmd brew install gcc
+    qcmd brew install gcc
+    qcmd brew install geckodriver
+    qcmd brew install geckodriver
+    qcmd brew install selenium-server-standalone
+    qcmd brew install selenium-server-standalone
+    qcmd brew install allure
+
+    qcmd brew cask install diffmerge
+    qcmd brew cask install diffmerge
+    qcmd brew cask install docker-toolbox
+    qcmd brew cask install docker-toolbox
+    qcmd brew cask install firefox
+    qcmd brew cask install firefox
+    qcmd brew cask install google-cloud-sdk
+    qcmd brew cask install google-cloud-sdk
+    qcmd brew cask install java
+    qcmd brew cask install java
+
+    qcmd "xargs brew cask install < \"${QETA_SRC}/test-framework/requirements/brew-cask-quicklook.txt\""
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.pip_and_flake8
+    ################################################################################
+    qcmd sudo -A easy_install pip
+    qcmd python3 -m pip install flake8
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.chrome
+    ################################################################################
+    qcmd "[ ! -f \"/Applications/Google Chrome.app\" ]"
+    if [ ":${qcmd_result_code}" == ":0" ] ; then
+        qcmd brew cask install google-chrome
+    fi
+    . updatechromedriver
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.verify_docker
+    ################################################################################
+    qcmd [ -d /Applications/Docker.app ]
+    if [ ":${qcmd_result_code}" == ":0" ] ; then
+        qlog comment "Docker verified to exist, and ready to start"
+    else
+        qlog comment "Docker is MISSING! the install didn't complete OK (first try)"
+        qlog brew cask reinstall docker
+
+        qcmd [ -d /Applications/Docker.app ]
+        if [ ":${qcmd_result_code}" == ":0" ] ; then
+            qlog comment "Docker verified to exist, and ready to start"
+        else
+            qlog comment "Docker is MISSING! the install didn't complete OK (second try)"
+            qcmd brew cask reinstall docker
+            qcmd [ -d /Applications/Docker.app ]
+            if [ ":${qcmd_result_code}" == ":0" ] ; then
+                qlog comment "Docker verified to exist, and ready to start"
+            else
+                message=""
+                message+="Something is really wrong with trying to get docker running.\n"
+                message+="Please contact test automation via slack, copy and paste this\n"
+                message+="error message, AND, also using slack, send them the log file at\n"
+                message+="${QETA_FRAMEWORK}/logs/fetch.log"
+                qlog fatal "${message}" 99
+            fi
+        fi
+    fi
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.launch_docker
+    ################################################################################
+    qcmd open /Applications/Docker.app &
+
+    qlog print "Validating docker is running..."
+
+    qcmd "ps -e | grep -v grep | grep com.docker.vmnetd"
+    if [ ":${qcmd_result_code}" == ":1" ] ; then
+        qlog comment "The docker deamon isn't running, trying to start it..."
+        qcmd "open /Applications/Docker.app &"
+    fi
+
+    qcmd "ps -e | grep -v grep | grep \"com.docker.hyperkit -A\""
+
+    if [ ":${qcmd_result_code}" == ":1" ] ; then
+        qlog comment "Waiting for docker to reply as running..."
+        for blocks in {1..100} ; do
+            qlog print "Docker doesn't appear to be running."
+            qlog print "It may be waiting for you to give it privilaged access."
+            qlog print "Please look for a dialog on your desktop."
+            qlog print "(After you dismiss that dialog, it can take up to a minute for"
+            qlog print "docker to start.)"
+            qlog print "Waiting..."
+
+            # this block echews the logging commands because it would just fill up the log
+            # with noise. instead, conventional log messages appear at the endpoints of
+            # the routine, whether as a fatal error, or post loop completion.
+            for lines in {1..20} ; do
+                for columns in {1..100} ; do
+                    for tenths in {1..50} ; do
+                        qcmd [ ":$(getdockerrunning)" == ":True" ]
+                        if [ ":${qcmd_result_code}" == ":0" ] ; then
+                            break
+                        fi
+                        sleep 0.1
+                        read -n 1 -t 1 foo
+                        if [ ":${foo}" == ":x" ] ; then
+                            message="You hit cancel before docker could start.\n"
+                            message="(might could be time to talk to test automation)"
+                            qlog fatal "${message}" 99
+                        fi
+                    done
+                    qcmd [ ":$(getdockerrunning)" == ":True" ]
+                    if [ ":${qcmd_result_code}" == ":0" ] ; then
+                        break
+                    fi
+                    echo -n "."
+                    qcmd "ps -e | grep -v grep | grep com.docker.vmnetd"
+                    if [ ":${qcmd_result_code}" == ":1" ] ; then
+                        qlog comment "The docker deamon isn't running, trying to start it..."
+                        qcmd "open /Applications/Docker.app &"
+                    fi
+                done
+                qcmd [ ":$(getdockerrunning)" == ":True" ]
+                if [ ":${qcmd_result_code}" == ":0" ] ; then
+                    break
+                fi
+            done
+            qcmd [ ":$(getdockerrunning)" == ":True" ]
+            if [ ":${qcmd_result_code}" == ":0" ] ; then
+                break
+            fi
+        done
+
+        getdockerrunning_now="$(getdockerrunning)"
+        # (note, cannot qcmd a function)
+        qcmd [ ":${getdockerrunning_now}" == ":True" ]
+        if [ ! ":${qcmd_result_code}" == ":0" ] ; then
+            message+="I'm soooo sorry! I couldn't get docker to start in the timeout!\n"
+            message+="Whaaaaaaa!\n"
+            message+="(might could be time to talk to test automation)\n"
+            qlog fatal "${message}" 99
+        fi
+    fi
+
+    qlog print "Validating docker is running: Done"
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.safari_enable
+    ################################################################################
+    qcmd "sudo -A safaridriver --enable"
+
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.show_hidden_files_in_finder
+    ################################################################################
+    qcmd defaults read com.apple.finder | grep AppleShowAllFiles | grep YES
+    if [ ":${qcmd_result_code}" == ":1" ] ; then
+        qlog comment "making hidden files visible in finder..."
+        qcmd defaults write com.apple.finder AppleShowAllFiles YES
+        qcmd killall Finder
+    fi
+    ################################################################################
+    # Section:
+    #   install_os_packages_mac.diffmerge
+    ################################################################################
+    qcmd git config --global diff.tool diffmerge
+    qcmd git config --global difftool.diffmerge.cmd "/Applications/DiffMerge.appContents/MacOS/diffmerge \$LOCAL \$REMOTE"
+
+    ################################################################################
+    # Section:
+    #   install node
+    ################################################################################
+    qlog quiet "Installing node"
+    install_node
+
+
+    qlog quiet "install_os_packages_mac: DONE"
+}
+export -f install_os_packages_mac
+
+################################################################################
+# method:
+#   install_os_packages_linux
+#
+# purpose:
+#   Installs all os level packages for Linux OS
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   module.logging
+#
+# notes:
+#
+#
+################################################################################
+function install_os_packages_linux() {
+    # install prerequisites
+    qcmd sudo apt-get update
+    qcmd sudo apt-get install -y build-essential curl jq coreutils
+    qcmd sudo apt-get install -y unzip xvfb libxi6 libgconf-2-4
+    qcmd sudo apt-get install -y apt-transport-https dirmngr ca-certificates
+    qcmd sudo apt-get install -y gnupg2 software-properties-common
+
+    # install packages
+    qcmd sudo apt-get install -y bash-completion
+    qcmd sudo apt-get install -y default-jre
+    qcmd sudo apt-get install -y firefox-esr
+    qcmd sudo apt-get install -y flake8
+    install_geckodriver_linux
+    install_docker_linux
+    install_selenium_linux
+    install_chrome_linux
+    install_gcloud_linux
+    install_node
+
+    qlog "install_os_packages_linux: DONE"
+}
+export -f install_os_packages_linux
+
+################################################################################
+# method:
+#   install_geckodriver_linux
+#
+# purpose:
+#   Install geckodriver
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   none
+#
+################################################################################
+function install_geckodriver_linux() {
+    # Install geckodriver
+    install_dir="/usr/local/bin"
+    json=$(curl -s https://api.github.com/repos/mozilla/geckodriver/releases/latest)
+    url=$(echo "${json}" | jq -r '.assets[].browser_download_url | select(contains("linux64"))')
+    curl -s -L "${url}" | tar -xz
+    chmod +x geckodriver
+    sudo mv geckodriver "${install_dir}"
+}
+export -f install_geckodriver_linux
+
+################################################################################
+# method:
+#   install_docker_linux
+#
+# purpose:
+#   Install docker and docker-compose
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   none
+#
+################################################################################
+function install_docker_linux() {
+    wget -qO - https://apt.dockerproject.org/gpg | sudo apt-key add -
+    # Append the source if it's not already present
+    LINE="deb [arch=amd64] https://download.docker.com/linux/debian buster stable"
+    FILE="/etc/apt/sources.list"
+    sudo grep -qF -- "${LINE}" "${FILE}" || echo "${LINE}" | sudo tee -a "${FILE}"
+    sudo apt-get -qq update
+    sudo apt-get -qq install -y docker
+    sudo apt-get -qq install -y docker-compose
+}
+export -f install_docker_linux
+
+################################################################################
+# method:
+#   install_diffmerge_linux
+#
+# purpose:
+#   Install diffmerge
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   none
+#
+################################################################################
+function install_diffmerge_linux() {
+    wget -qO - http://debian.sourcegear.com/SOURCEGEAR-GPG-KEY | sudo apt-key add -
+    LINE="deb http://debian.sourcegear.com/ubuntu xenial main"
+    FILE="/etc/apt/sources.list.d/sourcegear.list"
+    sudo touch ${FILE}
+    sudo grep -qF -- "${LINE}" "${FILE}" || echo "${LINE}" | sudo tee -a "${FILE}"
+    sudo apt-get -qq update
+    sudo apt-get -qq install -y diffmerge
+}
+export -f install_diffmerge_linux
+
+################################################################################
+# method:
+#   install_selenium_linux
+#
+# purpose:
+#   Install selenium server
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   none
+#
+################################################################################
+function install_selenium_linux() {
+    install_dir="/usr/local/bin"
+    SELENIUM_STANDALONE_FAMILY=3.12
+    SELENIUM_MINOR=0
+    SELENIUM_VERSION=${SELENIUM_STANDALONE_FAMILY}.${SELENIUM_MINOR}
+    SELENIUM_BINARY_NAME='selenium-server-standalone'
+    SELENIUM_BINARY_EXTENSION='jar'
+    SELENIUM_BINARY=${SELENIUM_BINARY_NAME}.${SELENIUM_BINARY_EXTENSION}
+    SELENIUM_REMOTE_BINARY=${SELENIUM_BINARY_NAME}-${SELENIUM_VERSION}.${SELENIUM_BINARY_EXTENSION}
+    wget -qO ${SELENIUM_BINARY} https://selenium-release.storage.googleapis.com/${SELENIUM_STANDALONE_FAMILY}/${SELENIUM_REMOTE_BINARY}
+    chmod +x ${SELENIUM_BINARY}
+    sudo mv -f ${SELENIUM_BINARY} ${install_dir}
+}
+export -f install_selenium_linux
+
+################################################################################
+# method:
+#   install_chrome_linux
+#
+# purpose:
+#   Install Google Chrome browser
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   none
+#
+################################################################################
+function install_chrome_linux() {
+    wget -qO - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+    LINE="deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
+    FILE="/etc/apt/sources.list.d/google-chrome.list"
+    sudo touch ${FILE}
+    sudo grep -qF -- "${LINE}" "${FILE}" || echo "${LINE}" | sudo tee -a "${FILE}"
+    sudo apt-get -qq update
+    sudo apt-get -qq install -y google-chrome-stable
+    . updatechromedriver
+}
+export -f install_chrome_linux
+
+################################################################################
+# method:
+#   install_gcloud_linux
+#
+# purpose:
+#   Install Google Cloud SDK tools for Linux
+#
+# parameters:
+#   none
+#
+# returns:
+#   none
+#
+# dependencies:
+#   none
+#
+################################################################################
+function install_gcloud_linux() {
+    # Get the key for the repository
+    wget -qO - https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+
+    # Append the source if it's not already present
+    LINE="deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main"
+    FILE="/etc/apt/sources.list.d/google-cloud-sdk.list"
+    sudo grep -qF -- "${LINE}" "${FILE}" || echo "${LINE}" | sudo tee -a "${FILE}"
+
+    # Update the distribution
+    sudo apt-get -qq update
+
+    # Get the software
+    sudo apt-get -qq install -y google-cloud-sdk
+
+    # For this to work your google client needs to be previously initialized
+    export PATH="/usr/bin:/usr/local/bin:$PATH"
+    gcloud auth configure-docker -q
+
+}
+export -f install_gcloud_linux
+
+################################################################################
+# Method:
+#   remove_os_packages
+#
+# Purpose:
+#   uninstalls all os level packages
+#
+# Arguments:
+#   none
+#
+# Returns:
+#   none
+#
+# Dependencies:
+#   module.logging
+#
+################################################################################
+function remove_os_packages() {
+
+    case $(os_detect) in
+        Mac)
+            remove_os_packages_mac $@
+            ;;
+        Linux)
+            remove_os_packages_linux $@
+            ;;
+        *)
+            qlog fatal "unknown os $(os_detect)"
+            ;;
+    esac
+}
+export -f remove_os_packages
+
+################################################################################
+# Method:
+#   remove_os_packages_mac
+#
+# Purpose:
+#   uninstalls all os level packages on mac
+#
+# Arguments:
+#   none
+#
+# Returns:
+#   none
+#
+# Dependencies:
+#   module.logging
+#
+################################################################################
+function remove_os_packages_mac() {
+    qcmd brew uninstall --ignore-dependencies bash-completion
+    qcmd brew uninstall --ignore-dependencies docker-compose
+    qcmd brew uninstall --ignore-dependencies geckodriver
+    qcmd brew uninstall --ignore-dependencies selenium-server-standalone
+    qcmd brew cask uninstall -f diffmerge
+    qcmd brew cask uninstall -f docker-toolbox
+    qcmd brew cask uninstall -f firefox
+    qcmd brew cask uninstall -f java
+
+    qcmd sudo -A -E -- /bin/rm -f -- /Library/LaunchDaemons/com.docker.vmnetd.plist
+    qcmd brew cask uninstall -f docker
+}
+
+################################################################################
+# Method:
+#   remove_os_packages_linux
+#
+# Purpose:
+#   uninstalls all os level packages on linux
+#
+# Arguments:
+#   none
+#
+# Returns:
+#   none
+#
+# Dependencies:
+#   module.logging
+#
+################################################################################
+function remove_os_packages_linux() {
+    qcmd sudo apt-get remove -y build-essential curl jq coreutils
+    qcmd sudo apt-get remove -y unzip xvfb libxi6 libgconf-2-4
+    qcmd sudo apt-get remove -y apt-transport-https dirmngr ca-certificates
+    qcmd sudo apt-get remove -y gnupg2 software-properties-common
+    qcmd sudo apt-get remove -y bash-completion
+    qcmd sudo apt-get remove -y chromedriver
+    qcmd sudo apt-get remove -y default-jre
+    qcmd sudo apt-get remove -y firefox-esr
+    qcmd sudo apt-get remove -y flake8
+    sudo apt-get remove docker
+    sudo apt-get remove docker-compose
+    rm -rf /usr/local/bin/geckodriver
+    rm /usr/local/bin/selenium-server-standalone.jar
+    sudo apt-get remove -y google-chrome-stable
+    exit 0
+}
+
+
+
+################################################################################
+################################################################################
+# /Users/akien/src/test-framework/testframework/bin/module.logging
+################################################################################
+################################################################################
+
+#!/usr/bin/env bash
+
+################################################################################
+# Module:
+#   module.logging
+#
+# Purpose:
+#   uniform logging module for bash scripts
+#
+# Arguments:
+#   - $1 = -q means don't send the step message to the console (quiet)
+#   - others vary by function
+#
+# Returns:
+#   varies by function
+#
+# Raises:
+#   varies by function
+#
+# Dependencies:
+#   varies by function
+#
+# public interfaces:
+#    qlog [optional tag] "message"
+#        tag is a data element that subscribers can be sensitive to
+#
+#    qcmd linux command line
+#        run a linux command, output goes via tee to console and
+#        base logfile, and result code is captured in qcmd_result_code
+#
+#    qaddfile filespec
+#        copy the specified file to the debug log channel
+#        (line by line, so it's slow)
+#
+# Notes:
+#    this file implements a publish/subscribe logging engine for bash
+#    this makes the logging code output kinda slowly, as if from a tty.
+#    it just takes time to process all the subscribers from the subscription
+#    list.
+#
+#    originally built to help debug scripts by routing messages, commands,
+#    and status codes to a log file. if a script calls several subscripts,
+#    all the messages will still be in one file.
+#
+#    there is one default 'debug log file' subscriber, and it uses the name
+#    stored in $___log_debug_base_file
+#
+################################################################################
+
+if [ -z "${___log_debug_base_file}" ] ; then
+
+    ################################################################################
+    # runtime logging control switches, for constant rerunning during debugging
+    export ___log_internal_debug="False"
+
+
+    ################################################################################
+    # report starting
+    mkdir -p "${QETA_FRAMEWORK}/logs"
+    export ___log_debug_base_file="${QETA_FRAMEWORK}/logs/$(basename $0).log"
+    echo "" > $___log_debug_base_file
+
+    if [ ! ":$1" == ":-q" ] ; then
+        echo ""
+        echo -n "Logging starting to ${___log_debug_base_file}..."
+    fi
+
+    ################################################################################
+    # Method:
+    #   ___log_debug
+    #
+    # Purpose:
+    #   used internally to logging to log about the logger. mostly unused unless
+    #   there's a bug in logging.
+    #
+    #   ***** ONLY ECHOS TO CONSOLE!!!! *****
+    #   ***** ONLY ECHOS TO CONSOLE!!!! *****
+    #   ***** ONLY ECHOS TO CONSOLE!!!! *****
+    #
+    # Arguments:
+    #   stuff to be echoed if ":${___log_internal_debug}" == ":True"
+    #
+    # Notes:
+    #   Akien moved this on 2019/04/15 because I had a file misbehave, and complain about
+    #   not having this function available. By putting it first, I hope to mitigate that.
+    #
+    ################################################################################
+    function ___log_debug() {
+        if [ ":${___log_internal_debug}" == ":True" ] ; then
+            echo -e "$@"
+        fi
+    }
+
+    ################################################################################
+    # Method:
+    #   qlog
+    #
+    # Purpose:
+    #   primary logging entry point. takes in new message and dispatches it to
+    #   the subscribers subscribed to that channel.
+    #
+    # Arguments:
+    #   - $1 = if only one arg passed: messsage to send to 'print' channel
+    #   - $1 = if two or more args passed: logging channel (eg, print, debug, comment, etc)
+    #   - $2 = message to broadcast on that channel
+    #   - some subscribers may have additional arguments they pay attention to
+    #
+    # Returns:
+    #   none
+    #
+    # Raises:
+    #   none
+    #
+    # Notes:
+    #   commented # ___log_debug lines are for debugging the logging sytem
+    #   and have proved useful enough that i am leaving them in there for
+    #   future debugging.
+    #
+    ################################################################################
+    function qlog() {
+        unset FATAL_ERROR
+        ___log_debug "\n################################################################################"
+        ___log_debug "# qlog start of message"
+        ___log_debug "$ qlog $@"
+
+        local tag
+        local message
+        local rc
+
+        if [ -z "${2}" ] ; then
+            tag="print"
+            message="${1}"
+            if [ ":${message}" == ":print" ] ; then
+                message="\05"
+            fi
+        else
+            local tag="${1}"
+            local message="\05${2}"
+        fi
+        # ___log_debug "$ qlog tag=$tag"
+        # ___log_debug "$ qlog message=$message"
+
+        ___log_debug "# qlog dispatcher start"
+
+        local current_subscriber
+
+        for current_subscriber in "${___log_subscriber_names[@]}" ; do
+
+            ___log_debug "$ current_subscriber=${current_subscriber} ${tag} ${message}"
+
+            if [ ! ":${current_subscriber}" == ":" ] ; then
+
+                #___log_debug "# qlog verified that current_subscriber is not blank"
+                #___log_debug "# qlog now checking ___log_consume_current_message=$___log_consume_current_message"
+
+                if [ ! ":${___log_consume_current_message}" == ":True" ] ; then
+
+                    #___log_debug "# qlog verified that ___log_consume_current_message != True"
+                    #___log_debug "# qlog now checking ___log_check_subscriber_filters $tag $current_subscriber"
+
+                    ___log_check_subscriber_filters $tag $current_subscriber
+                    local rc=$?
+                    if [ ":${rc}" == ":0" ] ; then
+                        ___log_debug "# qlog DISPATCHING ${current_subscriber} ${tag} ${message} ${3} ${4}"
+                        $current_subscriber "${tag}" "${message}" "${3}" "${4}"
+                        dispatch_rc=$?
+                        if [ ! ":$dispatch_rc" == ":0" ] ; then
+                            FATAL_ERROR=$dispatch_rc
+                        fi
+                    else
+                        ___log_debug "# qlog got not-to-forward back from ___log_check_subscriber_filters $tag $message"
+                    fi
+                else
+                    # ___log_debug "# qlog ___log_consume_current_message was True"
+                    local nop=0
+                fi
+            else
+                # ___log_debug "# qlog current_subscriber was empty. prolly end of list"
+                local nop=0
+            fi
+        done
+        ___log_consume_current_message="False"
+        ___log_debug "end of message\n################################################################################"
+
+        if [ -n "${FATAL_ERROR}" ] ; then
+            echo "OH NO! IT BROKE! SO SAD! PLEASE LET AUTOMATION KNOW. THANK YOU FRIENDLY PERSON!"
+            getqetadebuginfo
+            exit $FATAL_ERROR
+        fi
+    }
+
+    ___log_subscriber_names=()
+    ___log_consume_current_message="False"
+    export -f qlog
+
+    ################################################################################
+    # Method:
+    #   qcmd
+    #
+    # Purpose:
+    #   secondary logging entry point. executes a command. logs the command to the
+    #   debug channel. logs the result code to the channel too. returns the result
+    #   code, both as the result code of the function, but also in $qcmd_result_code
+    #
+    # Arguments:
+    #   all arguments are passed to bash to execute
+    #
+    # Returns:
+    #   none
+    #
+    # Raises:
+    #   none
+    #
+    # Notes:
+    #   not ideal to try calling bash functions from qcmd
+    #
+    ################################################################################
+    function qcmd() {
+        qlog debug "$ qcmd $1 $2 $3 $4 $5 $6 $7 $8 $9"
+        eval $@ > "${QETA_FRAMEWORK}/logs/qcmd.log" 2>&1
+        qcmd_result_code="${PIPESTATUS[0]}"
+        local console_output=$(cat "${QETA_FRAMEWORK}/logs/qcmd.log")
+        if [ ! ":${console_output}" == ":" ] ; then
+            qlog debug "${console_output}"
+        fi
+
+        qlog debug "$ qcmd_result_code=${qcmd_result_code}"
+        export qcmd_result_code
+        return "${qcmd_result_code}"
+    }
+    export -f qcmd
+
+    ################################################################################
+    # Method:
+    #   qaddfile
+    #
+    # Purpose:
+    #   cats the specified file into the log
+    #
+    # Arguments:
+    #   $1 = filename
+    #
+    # Returns:
+    #   none
+    #
+    # Raises:
+    #   message to log
+    #
+    ################################################################################
+    function qaddfile() {
+        if [ -n "$1" ] ; then
+            if [ -f "$1" ] ; then
+                qcmd cat "$1"
+            else
+                qlog debug "asked to push a file to the log, but file not found: $1"
+            fi
+        else
+            qlog debug "asked to push a file to the log, but no file specified"
+        fi
+    }
+
+    ################################################################################
+    # Method:
+    #   ___log_add_log_subscriber
+    #
+    # Purpose:
+    #   adds a subscriber to the engine's list of subscribers: ___log_subscriber_names
+    #
+    # Arguments:
+    #   name of the subscriber function to add
+    #
+    # Returns:
+    #   none
+    #
+    # Raises:
+    #   none
+    #
+    ################################################################################
+    function ___log_add_log_subscriber() {
+
+        # arg1 = tag channel to add
+        local array_length=${#___log_subscriber_names[@]}
+
+        ___log_subscriber_names[${array_length}]=${1}
+        ___log_debug "___log_add_log_subscriber  ___log_subscriber_names[${array_length}]=${1}"
+    }
+
+    ################################################################################
+    # Method:
+    #   ___log_get_property
+    #
+    # Purpose:
+    #   fetches an subscriber property from it's data set. used to check things like
+    #   whether or not a particular subscriber
+    #
+    # Arguments:
+    #   $1 - subscriber_name
+    #   $2 - property_name
+    #   $3 - default_value
+    #
+    # Returns:
+    #   echos the value to console or empty string
+    #
+    # Usage:
+    #   local allowed=$(___log_get_property "$subscriber_name" "allowed" "*")
+    #
+    ################################################################################
+    function ___log_get_property() {
+        local subscriber_name="${1}"
+        local property_name="${2}"
+        local default_value="${3}"
+        local property_value
+
+        local property_vector="${subscriber_name}_${property_name}"
+        eval property_value="\$$property_vector"
+
+        # if we were passed no value but were passed a defult value
+        if [ -z "$property_value" ] && [ ! -n "$default_value" ] ; then
+            property_value=$default_value
+        fi
+        echo "${property_value}"
+    }
+
+    ################################################################################
+    # Method:
+    #   ___log_set_property
+    #
+    # Purpose:
+    #   complements ___log_get_property, sets a value
+    #
+    # Arguments:
+    #   $1 - subscriber_name
+    #   $2 - property_name
+    #   $3 - new value
+    #
+    # Returns:
+    #   nothing
+    #
+    # Usage:
+    #   ___log_set_property "$subscriber_name" "allowed" "*"
+    #
+    # Notes:
+    #   originally built to complement ___log_get_property, but was actually
+    #   never used. it's easier to say property_name=bar
+    #
+    # TODO: remove?
+    #
+    ################################################################################
+    function ___log_set_property() {
+        local subscriber_name="${1}"
+        local property_name="${2}"
+        local property_vector="${subscriber_name}_${property_name}"
+        ${property_vector}="${3}"
+    }
+
+    ################################################################################
+    # Method:
+    #   ___log_check_subscriber_filters
+    #
+    # Purpose:
+    #   checks subscriber metadata properties to see if the specified subscriber
+    #   is subscribed to this particular channel
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2 - subscriber name
+    #
+    # Returns:
+    #   echos eithwe PASSED or BLOCKED
+    #
+    ################################################################################
+    function ___log_check_subscriber_filters() {
+
+        local tag="${1}"
+        local subscriber_name="${2}"
+        local allowed=$(___log_get_property "$subscriber_name" "allowed" "*")
+        local disallowed=$(___log_get_property "$subscriber_name" "disallowed" "")
+        local enabled=$(___log_get_property "$subscriber_name" "enabled" True)
+
+        local allowed_passed
+        local disallowed_passed
+        local enabled_passed
+        local result
+        local message
+
+        # returns expression that evaluates to True or False
+        echo " ${allowed} " | grep " ${tag} " > /dev/null 2>&1
+        if [ ":$?" == ":0" ] || [ ": ${allowed} " == ": * " ] ; then
+            allowed_passed="True"
+        else
+            allowed_passed="False"
+        fi
+
+        if [ -n "${disallowed}" ] ; then
+            echo " ${disallowed} " | grep " ${tag} " > /dev/null 2>&1
+            if [ ":$?" == ":0" ] ; then
+                disallowed_passed="False"
+            else
+                disallowed_passed="True"
+            fi
+        else
+            disallowed_passed="True"
+        fi
+
+        if [ ":${enabled}" == ":True" ] ; then
+            enabled_passed="True"
+        else
+            enabled_passed="False"
+        fi
+
+        if [ ":${allowed_passed}" == ":True" ] && [ ":${disallowed_passed}" == ":True" ] && [ ":${enabled_passed}" == ":True" ] ; then
+            result=0
+            message=PASSED
+        else
+            result=1
+            message=BLOCKED
+        fi
+
+        ___log_debug "# ___log_check_subscriber_filters allowed_passed=${allowed_passed} disallowed_passed=${disallowed_passed} enabled_passed=${enabled_passed} == ${message}"
+        return $result
+
+    }
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_warn
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on warn channel
+    #   - displays standard warn message on the print channel
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2+ - message
+    #
+    # Returns:
+    #   output to print channel
+    #
+    # Note:
+    #   THIS SUBSCRIBER CONSUMES IT'S MESSAGE.
+    #
+    ################################################################################
+    function ___log_subscriber_warn() {
+        ___log_subscriber_warn_enabled="False"
+        qlog print ""
+        qlog print ""
+        qlog print "$EIGHTYPOUNDS"
+        qlog print "WARNING!! - WARNING!! - WARNING!! - WARNING! - WARNING!! - WARNING!! - WARNING!!"
+        qlog print "WARNING!! - WARNING!! - WARNING!! - WARNING! - WARNING!! - WARNING!! - WARNING!!"
+        qlog print "WARNING!! - WARNING!! - WARNING!! - WARNING! - WARNING!! - WARNING!! - WARNING!!"
+        qlog print ""
+        qlog print "Uh oh, looks dodgy to me... ¯\_(ツ)_/¯ "
+        qlog print ""
+        qlog print "--"
+        qlog print "${2}"
+        qlog print "--"
+        qlog print ""
+        qlog print "you have been warned, friendly person..."
+        qlog print ""
+        qlog print "if you're not sure what to do, contact the automation team via slack"
+        qlog print "thanks"
+        qlog print ""
+        qlog print "WARNING!! - WARNING!! - WARNING!! - WARNING! - WARNING!! - WARNING!! - WARNING!!"
+        qlog print "WARNING!! - WARNING!! - WARNING!! - WARNING! - WARNING!! - WARNING!! - WARNING!!"
+        qlog print "WARNING!! - WARNING!! - WARNING!! - WARNING! - WARNING!! - WARNING!! - WARNING!!"
+        qlog print "$EIGHTYPOUNDS"
+        qlog print ""
+        qlog print ""
+        qlog print ""
+        ___log_subscriber_warn_enabled="True"
+        ___log_consume_current_message="True"
+    }
+    ___log_subscriber_warn_busy="False"
+    ___log_subscriber_warn_allowed="warn"
+    ___log_subscriber_warn_disallowed="fatal print comment debug"
+    ___log_subscriber_warn_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_warn
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_fatal
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on fatal channel
+    #   - displays standard fatal message on the print channel
+    #   - exits
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2 - message
+    #   $3 - optional result code to exit with
+    #   $4 - optional close method to call after banner displayed
+    #
+    # Returns:
+    #   output to print channel
+    #
+    # Note:
+    #   THIS SUBSCRIBER CONSUMES IT'S MESSAGE.
+    #
+    ################################################################################
+    # displays fatal error message and stops
+
+    function ___log_subscriber_fatal() {
+        ___log_subscriber_fatal_enabled="False"
+
+        qlog print ""
+        qlog print ""
+        qlog print ""
+        qlog print "$EIGHTYPOUNDS"
+        qlog print "FATAL!! - FATAL!! - FATAL!! - FATAL!! ---- FATAL!! - FATAL!! - FATAL!! - FATAL!!"
+        qlog print "FATAL!! - FATAL!! - FATAL!! - FATAL!! ---- FATAL!! - FATAL!! - FATAL!! - FATAL!!"
+        qlog print "FATAL!! - FATAL!! - FATAL!! - FATAL!! ---- FATAL!! - FATAL!! - FATAL!! - FATAL!!"
+        qlog print ""
+        qlog print "Oh no! It broke! So sad!"
+        qlog print ""
+        qlog print "--"
+        qlog print "${2}"
+        qlog print "--"
+        qlog print ""
+        qlog print "so sorry friendly person :("
+        qlog print ""
+        qlog print "if you're unsure what to do next, run this command: getqetadebuginfo"
+        qlog print "it will give you a zip file to send to the automation team. thanks!"
+        qlog print ""
+        qlog print "FATAL!! - FATAL!! - FATAL!! - FATAL!! ---- FATAL!! - FATAL!! - FATAL!! - FATAL!!"
+        qlog print "FATAL!! - FATAL!! - FATAL!! - FATAL!! ---- FATAL!! - FATAL!! - FATAL!! - FATAL!!"
+        qlog print "FATAL!! - FATAL!! - FATAL!! - FATAL!! ---- FATAL!! - FATAL!! - FATAL!! - FATAL!!"
+        qlog print "$EIGHTYPOUNDS"
+
+        local error_number=1
+
+        if [ -z "${3}" ] ; then
+            error_number=1
+        else
+            error_number="$3"
+            qlog print "abort code: $error_number"
+        fi
+        if [ -n "${4}" ] ; then
+            shift
+            shift
+            shift
+            $@
+        fi
+        qlog print ""
+        getqetadebuginfo
+        exit $error_number
+    }
+    ___log_fatal_busy="False"
+    ___log_subscriber_fatal_allowed="fatal"
+    ___log_subscriber_fatal_disallowed="print comment debug warn"
+    ___log_subscriber_fatal_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_fatal
+
+    ################################################################################
+    # Method:
+    #   ___set_result
+    #
+    # Purpose:
+    #   sets a result code used by the various subscribers
+    #
+    # Arguments:
+    #   $1 - result code to set
+    #
+    # Returns:
+    #   result code
+    #
+    ################################################################################
+    function ___set_result() {
+        return $1
+    }
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_sudo
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on all channels
+    #   - if both SUDO_ASKPASS and noop environment variables are specifed,
+    #     ping sudo, resetting the sudo timeout counter
+    #
+    # Arguments:
+    #   $1 - logging tag (ignored)
+    #   $2 - message (ignored)
+    #
+    # Returns:
+    #   result code = 0
+    #
+    ################################################################################
+    function ___log_subscriber_sudo() {
+        test -n "${SUDO_ASKPASS}" && test -n "${noop}" && test -f "${QETA_BIN}/noop" && sudo -A echo "sudo OK" > /dev/null
+        ___set_result 0
+    }
+    ___log_subscriber_sudo_allowed="*"
+    ___log_subscriber_sudo_disallowed=""
+    ___log_subscriber_sudo_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_sudo
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_debug_comment
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on comment channel
+    #   - sends to debug channel, with messages prefaced with '# ' as if it were
+    #     a comment in a script
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2+ - message, etc
+    #
+    # Returns:
+    #   none
+    #
+    ################################################################################
+    function ___log_subscriber_debug_comment() {
+        ___log_subscriber_debug_comment_enabled="False"
+        shift
+        qlog debug "# $@"
+        ___log_subscriber_debug_comment_enabled="True"
+    }
+    ___log_subscriber_debug_comment_allowed="comment"
+    ___log_subscriber_debug_comment_disallowed="print quiet"
+    ___log_subscriber_debug_comment_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_debug_comment
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_debug_console
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on debug channel
+    #   - copies to console if QETA_LOG_TAGS contains "Debug"
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2+ - message, etc
+    #
+    # Returns:
+    #   none
+    #
+    ################################################################################
+    function ___log_subscriber_debug_console() {
+        echo "${QETA_LOG_TAGS}" | grep "Debug" > /dev/null
+        if [ ":$?" == ":0" ] ; then
+            echo -e "dbg: ${2}"
+        fi
+    }
+    ___log_subscriber_debug_console_allowed="debug"
+    ___log_subscriber_debug_console_disallowed="print"
+    ___log_subscriber_debug_console_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_debug_console
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_debug_base_file
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on all channels
+    #   - echos timestamp to file named in $___log_debug_base_file
+    #   - echos message to file named in $___log_debug_base_file
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2+ - message, etc
+    #
+    # Returns:
+    #   none
+    #
+    ################################################################################
+    function ___log_subscriber_debug_base_file() {
+        echo -e "$(date +%0H:%0M:%0S): ${2}" >> "${___log_debug_base_file}" 2>&1
+    }
+
+    ___log_subscriber_debug_base_file_allowed="*"
+    ___log_subscriber_debug_base_file_disallowed=""
+    ___log_subscriber_debug_base_file_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_debug_base_file
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_normal_console_print
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on print channel
+    #   - echos message to console
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2+ - message, etc
+    #
+    # Returns:
+    #   none
+    #
+    ################################################################################
+    function ___log_subscriber_normal_console_print() {
+        if [ ":${___log_last_normal_print_message}" == ":." ] ; then
+            echo ""
+        fi
+        echo -e "${2}"
+        ___log_last_normal_print_message="${2}"
+    }
+    ___log_subscriber_normal_console_print_allowed="print"
+    ___log_subscriber_normal_console_print_disallowed="debug comment fatal warn"
+    ___log_subscriber_normal_console_print_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_normal_console_print
+
+    ################################################################################
+    # Method:
+    #   ___log_subscriber_debug_dots
+    #
+    # Purpose:
+    #   - log subscriber
+    #   - listens on debug channel
+    #   - echos periods to console (never prints actual message)
+    #   - used to simply indicate "still working"
+    #
+    # Arguments:
+    #   $1 - logging tag
+    #   $2+ - message, etc
+    #
+    # Returns:
+    #   none
+    #
+    ################################################################################
+    function ___log_subscriber_debug_dots() {
+        ___log_debug "$ echo debug | grep -iw ${1}"
+        echo "debug" | grep -iw "${1}" > /dev/null 2>&1
+        local rc=$?
+        ___log_debug "$ rc=$rc"
+        if [ ":${rc}" == ":0" ] ; then
+            ___log_debug "$ echo ${QETA_LOG_TAGS} | grep -wi debug"
+            echo " ${QETA_LOG_TAGS} " | grep -wi "debug" > /dev/null 2>&1
+            rc=$?
+            ___log_debug "$ rc=$rc"
+            if [ ":${rc}" == ":1" ] ; then
+                echo -n "."
+                ___log_last_normal_print_message="."
+            fi
+        fi
+    }
+    ___log_last_print_message=""
+    ___log_subscriber_debug_dots_allowed="debug"
+    ___log_subscriber_debug_dots_disallowed="print fatal warn"
+    ___log_subscriber_debug_dots_enabled="True"
+    ___log_add_log_subscriber ___log_subscriber_debug_dots
+
+    if [ ! ":$1" == ":-q" ] ; then
+        qlog comment "Logging ready."
+    fi
+
+    ################################################################################
+    # Method:
+    #   ____log_unit_tests
+    #
+    # Purpose:
+    #   runs thru several key functions in the logger. not yet comprehensive.
+    #
+    # Arguments:
+    #   none
+    #
+    # Returns:
+    #   various stuff to console and logfiles
+    #
+    # Note:
+    #   module.logging.tests just calls this
+    #
+    ################################################################################
+    function ____log_unit_tests() {
+        qcmd ls -al
+        qcmd ls -al slobber
+        qlog print  "hello!"
+        qlog comment "comment message 1"
+        qlog debug "debug message 2"
+        echo "TURN OFF DEBUG"
+        unset QETA_LOG_TAGS
+        qlog debug "debug message 3"
+        qlog debug "debug message 4"
+        qlog debug "debug message 5"
+        qlog debug "debug message 6"
+        qlog debug "debug message 7"
+        qlog print "ok"
+        qlog debug "testing variable setting"
+        foo=FAILED
+        qcmd foo=PASSED
+        echo "foo=$foo"
+        if [ ! ":${foo}" == ":PASSED" ] ; then
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            echo "SETTING VARIABLES FAILED!!!"
+            exit 254
+        fi
+        qlog "warn" "WARNING! WARNING! DANGER WILL RONINSON!"
+        echo "cat ${___log_debug_base_file}"
+        qlog fatal "testing the fatal"
+    }
+fi
+
+
+
+################################################################################
+################################################################################
+# /Users/akien/src/test-framework/testframework/bin/module.refreshqeta
+################################################################################
+################################################################################
+
+#!/usr/bin/env bash
+
+################################################################################
+# Module:
+#   refresqeta
+#
+# Purpose:
+#   sets up or resets the QETA environment to make it ready to run and
+#   develop tests. installs packages, sets up git ssh, fetchs source code,
+#   sets up directories and environment variables, builds container
+#
+# Arguments:
+#   -C Clean mode. removes framework and reinstalls
+#   -d development mode
+#   -q quick mode (for testing of refreshqeta)
+#
+# Returns:
+#   output to ~/framework/logs
+#
+# Dependencies:
+#   - module.helpers
+#   - module.logging
+#
+# Notes:
+#   - IMPORTANT:A refreshqeta IS A BUILT FILE, EDIT IT'S SUB-COMPONENT FILES!!!
+#     see buildqetarefresh for more information!!!
+#   - intended to be concatanated by buildqetarefresh, along with some other
+#     files, to produce refreshqeta
+#   - works with buildqetarefresh
+#   - do not remove
+#
+# TODO: several things:
+#   - move as many of the things in here as possible to late initialization,
+#     we can afford the overhead in this application
+#
+################################################################################
+
+
+################################################################################
+# SUPPORT FUNCTIONS
+
+################################################################################
+# Method:
+#   refreshqeta_qlogin
+#
+# Purpose:
+#   - ask user for password. this is part of the mechanism that allows
+#     us to enter the password only once. see also comments about noop.
+#   - adds SUDO_ASKPASS=${QETA_BIN}/noop
+#   - gives noop your password in memory only
+#   - this allows the logging engine to keep the sudo timeout running
+#
+# Arguments:
+#   none
+#
+# Returns:
+#   none
+#
+# TODO: make it's own module?
+#
+################################################################################
+function refreshqeta_qlogin() {
+
+    if [ -z $noop ] ; then
+        qcmd sudo -k
+
+        qlog print "refreshqeta asks you to please enter your SYSTEM password below."
+        read -es noop
+        export noop
+        export SUDO_ASKPASS="${QETA_BIN}/noop"
+        if [ -f "${QETA_BIN}/noop" ] ; then
+            sudo -A echo OK > /dev/null 2>&1
+            result=$?
+            while [ ! ":${result}" == ":0" ] ; do
+                echo ""
+                echo "didn't work! try again:"
+                echo "please enter your SYSTEM password below."
+                read -es noop > /dev/null
+                export noop
+                export SUDO_ASKPASS="${QETA_BIN}/noop"
+                sudo -A echo OK > /dev/null 2>&1
+                result=$?
+            done
+            echo ""
+            echo "login successful, continuing..."
+        else
+            echo "because this is the first time this is run, you need to enter your password one more time:"
+            sudo echo OK
+        fi
+    fi
+
+}
+
+################################################################################
+# Section:
+#   initialization
+#
+# Purpose:
+#   sets up variables for tracking time and so on
+#
+# TODO: make it's own module?
+#
+################################################################################
+qcmd refreshqeta_start_time_seconds=`date +%s`
+qcmd refreshqeta_start_time_stamp="\"$(date)\""
+
+qlog print "Starting refreshqeta"
+qcmd startdir="$(pwd)"
+
+# TODO: Linux?
+export PATH="${QETA_SRC}/test-framework/testframework/bin:${QETA_HOME}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin:/opt/local/bin:/opt/local/sbin:${PATH}"
+
+qlog print "Validating not running in container..."
+
+qcmd [ ":${DOCKER_CONTAINER}" == ":True" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    m="you are running inside a container. sadly, this is not allowed. :(\n"
+    m+="(it updates the container itself)\n\n"
+    m+="please exit the container and try again, friendly person!"
+    qlog fatal "$m"
+else
+    qlog comment "[ \$DOCKER_CONTAINER == \"True\" ] == False, installation can continue..."
+fi
+
+qlog print "Validated. Starting..."
+qlog print "Started at: ${refreshqeta_start_time_stamp}..."
+qcmd export _startdir=$(pwd)
+
+################################################################################
+# Section:
+#   user_login
+#
+################################################################################
+refreshqeta_qlogin
+
+################################################################################
+# Section:
+#   flags
+#
+################################################################################
+qcmd export _refreshqeta_mode_dev="True"
+qcmd export _refreshqeta_mode_clean="False"
+qcmd export _refreshqeta_mode_quick="False"
+
+################################################################################
+# Section:
+#   process_arguments
+#
+# Notes:
+#   allows arguments in any order
+#
+################################################################################
+qlog comment "Processing arguments..."
+
+oldifs="${IFS}"
+IFS=' ' read -r -a array <<< "${@}"
+IFS="${oldifs}"
+index=0
+length=${#array[@]}
+mass_args=()
+
+while [ $index -lt $length ]
+do
+    qcmd item=${array[${index}]}
+    case ${item} in
+        -C)
+            qcmd export _refreshqeta_mode_clean="True"
+            ;;
+        -d)
+            qcmd export _refreshqeta_mode_dev="True"
+            ;;
+        -q)
+            qcmd export _refreshqeta_mode_quick="True"
+            ;;
+        *)
+            mass_args+=(${array[${index}]})
+    esac
+    index=$((index + 1))
+done
+qlog debug "$ mass_args=${mass_args[@]}"
+qlog comment "Processing Arguments: Done"
+
+qlog debug "$ _refreshqeta_mode_clean=${_refreshqeta_mode_clean}"
+qlog debug "$ _refreshqeta_mode_dev=${_refreshqeta_mode_dev}"
+qlog debug "$ _refreshqeta_mode_quick=${_refreshqeta_mode_quick}"
+
+
+################################################################################
+# Section:
+#   directories
+#
+# TODO: remove as this is also in module.qeta_env_setup??
+#
+################################################################################
+qlog print "Validating QETA_SRC directory..."
+
+qcmd mkdir -p ${QETA_SRC}
+qcmd "test -d ${QETA_SRC}" && qlog comment "VERIFIED OK"
+
+qlog comment "Validating QETA_SRC directory: Done"
+
+
+################################################################################
+# Section:
+#   xcode
+#
+# TODO: move to module.platform
+#
+################################################################################
+if [ ":$(os_detect)" = ":Mac" ] ; then
+    qlog "Validating xcode installed..."
+
+    qlog comment "This next command may report an error, and that's ok"
+    # TODO: sort out which order these need to be done in
+    qcmd "sudo -A xcodebuild -license accept"
+    qcmd "sudo -A xcode-select --switch /Applications/Xcode.app"
+    qcmd "sudo -A xcodebuild -license accept"
+    qcmd "xcode-select --install"
+    qcmd "sudo -A xcodebuild -license accept"
+    qcmd "sudo -A xcode-select --reset"
+    qcmd "softwareupdate --install -a"
+
+    qlog comment "Validating xcode-select installed: Done"
+fi
+
+################################################################################
+# Section:
+#   validate_git_installed
+#
+# TODO: Now that git install is automagic, remove? or refactor & remove?
+#
+################################################################################
+qlog "Validating install for git..."
+
+install_git
+
+qlog comment "verifying operation of git..."
+
+qcmd git --version
+
+if [ ! ":${qcmd_result_code}" == ":0" ] ; then
+    qlog comment "if evaluated as True"
+    m="git didn't install successfully :(\n"
+    m+="sadly, i have no idea why. perhaps the log file\n"
+    m+="     ${logfile}\n"
+    m+=print "could shine some light on the problem.\n"
+    qlog fatal "${m}" 99
+fi
+
+# TODO: This should be moved to module.platform?
+qcmd if_mac git config --global credential.helper osxkeychain
+
+qlog comment "VERIFIED OK"
+qlog comment "Validating brew install for git: Done"
+
+
+################################################################################
+# Section:
+#   git_ssh_and_account_setup
+#
+# TODO: Make this it's own thing
+#
+################################################################################
+qlog "Validating git ssh..."
+
+qcmd [ ! -f "${QETA_HOME}/.ssh/id_rsa.pub" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    qlog comment "if evaluated as True"
+    qlog ""
+    qlog "Uh oh..."
+    qlog "It looks like git is installed, but hasn't been set up for ssh."
+    qlog "We'll get thru as much of that process as we can, but you'll have to"
+    qlog "do some of the work on the github web site. I'll give you the link"
+    qlog "when we're ready..."
+    qlog ""
+    qlog "Please enter your full name:"
+    qcmd read user_full_name
+    qlog "Please enter your email address:"
+    qcmd read user_email
+    qlog ""
+    qlog "We're now going to generate your ssh keys. When it asks for"
+    qlog "your passphrase, just hit enter:"
+    echo "" | ssh-keygen -t rsa -b 4096 -C "${user_email}"
+    qcmd $(ssh-agent -s)
+    qcmd [ ! -f "${QETA_HOME}/.ssh/config" ]
+    if [ ":${qcmd_result_code}" == ":0" ] ; then
+        qlog comment "if evaluated as True"
+        echo "Host *" > "${QETA_HOME}/.ssh/config"
+        echo " AddKeysToAgent yes" > "${QETA_HOME}/.ssh/config"
+        echo " UseKeychain yes" > "${QETA_HOME}/.ssh/config"
+        echo " IdentityFile ${QETA_HOME}/.ssh/id_rsa" > "${QETA_HOME}/.ssh/config"
+        qlog comment "Created {HOME}/.ssh/config"
+    fi
+    qcmd ssh-add -K ${QETA_HOME}/.ssh/id_rsa
+    qlog ""
+    qlog ""
+    qlog ""
+    qlog ""
+    qlog ""
+    qlog ""
+    qlog "OK, Now I'm gonna need your help."
+    qlog "First, i'm, going to open github, and you need to log in"
+    qlog "and then come back here and press a key for the next step."
+    qlog "now, press a key and i'll load github..."
+    qcmd read
+    qlog ""
+    qcmd open "https://github.com"
+    qlog "AFTER you've logged in, press a key to continue"
+    qcmd read
+    qlog ""
+    qlog "next, i will open the github shh keys page."
+    qlog "and as soon as I do that, you'll need to:"
+    qlog "1. Click 'new SSH key"
+    qlog "2. in the 'Title' text box, enter a title, such as 'work laptop' or whatever will help you remember it."
+    qlog "3. Click the box that says 'Key'"
+    qlog "4. command-v to paste"
+    qlog "5. Click 'Add SSH Key Button'"
+    qlog "6. Come back here and press Enter"
+    qcmd read
+    qlog ""
+    qcmd open "https://github.com/settings/keys"
+    qlog ""
+    qlog "Press enter AFTER you've done all that..."
+    qcmd read
+    qcmd git config --global user.name "${user_full_name}"
+    qcmd git config --global user.email "${user_email}"
+fi
+
+qcmd [ ! -f "${QETA_HOME}/.ssh/id_rsa.pub" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    qlog comment "if evaluated as True"
+    m="It looks like git is installed, but hasn't been set up for ssh.\n"
+    m+="I tried the usual process to set it up, but the ssh file is still\n"
+    m+="missing.\n"
+    qlog fatal "${m}" 99
+fi
+
+qlog comment "VERIFIED OK"
+qlog comment "Validating git ssh: Done"
+
+
+################################################################################
+# Section:
+#   validate testframework installed
+#
+################################################################################
+qlog print "Validating existance of test-framework..."
+
+qcmd test ! -d ${QETA_HOME}/bin && mkdir -p ${QETA_HOME}/bin
+qcmd test -d ${QETA_HOME}/bin && qlog comment "/bin VERIFIED OK"
+
+# do we have test-framework?
+qcmd [ ! -d "${QETA_SRC}/test-framework" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+
+    qlog "Cloning test-framework... (you may be asked for your github credentials)"
+    qcmd cd ${QETA_SRC}
+    qcmd git clone git@github.com:redbeacon/test-framework.git
+
+    # now we validate by checking for refreshqeta being available
+    qcmd [ ! -f "${QETA_BIN}/refreshqeta" ]
+    if [ ":${qcmd_result_code}" == ":0" ] ; then
+        m=""
+        m+="I'm afraid downloading the github test-framework repo failed.\n"
+        m+="It looks like you didn't complete the git ssh access.\n"
+        m+="\n"
+        m+="Please check out:\n"
+        m+="https://hdlabs.atlassian.net/wiki/spaces/QE/pages/85602451/1+Setup\n"
+        m+="and then try again.\n"
+        qlog fatal "${m}" 99
+    fi
+fi
+
+qlog comment "installing testframework hooks..."
+qcmd cd ${QETA_SRC}/test-framework/
+qcmd ./tools/hooks/install.sh
+
+qlog comment "Validating existence of test-framework: Done"
+
+
+################################################################################
+# Section:
+#   clean up artifacts from previous versions
+#
+################################################################################
+qlog print "Validating removal of old framework files..."
+
+removeme "${QETA_HOME}/.virtualenvs/qeta"
+removeme "${QETA_HOME}/.bash_profile.d"
+removeme "${QETA_HOME}/bin/runbmtest"
+removeme "${QETA_HOME}/bin/connectserver"
+removeme "${QETA_HOME}/bin/connecttester"
+removeme "${QETA_HOME}/bin/startselenium"
+removeme "${QETA_HOME}/bin/buildnewbm"
+removeme "${QETA_HOME}/bin/rebuildbm"
+removeme "${QETA_HOME}/bin/runserver"
+removeme "${QETA_HOME}/bin/selenium-server-standalone.jar"
+removeme "${QETA_HOME}/bin/chromedriver"
+removeme "${QETA_HOME}/bin/geckodriver"
+removeme "${QETA_FRAMEWORK}/local_data/flags"
+removeme "${QETA_FRAMEWORK}/local_data/flags/credentials.ini"
+removeme "${QETA_FRAMEWORK}/local_data/flags/services.ini"
+removeme "${QETA_FRAMEWORK}/bin"
+removeme "${QETA_FRAMEWORK}/host"
+removeme "${QETA_FRAMEWORK}/src"
+removeme "${QETA_FRAMEWORK}/flags"
+removeme "${QETA_FRAMEWORK}/semaphores"
+
+qlog comment "Validating removal of old framework files: Done"
+
+
+################################################################################
+# Section:
+#   set up bash profile
+#
+################################################################################
+qlog print "Validating autostart..."
+
+# TODO: MAKE THIS SMART ABOUT LINUX vs MAC
+qcmd "cat ${QETA_HOME}/.bash_profile | grep bash_profile.d"
+if [ ! ":${qcmd_result_code}" == ":0" ] ; then
+    qcmd "echo \"source ${QETA_BIN}/sourceifpresent ${QETA_BIN}/bash_profile.d\" >> ${QETA_HOME}/.bash_profile"
+fi
+
+qlog comment "Validating directories: Done"
+
+
+################################################################################
+# Section:
+#   validate testcommon ready
+#
+################################################################################
+qlog print "Validating existance of test-common..."
+
+# do we have test-common?
+qcmd [ ! -d "${QETA_SRC}/test-common" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    qcmd cd "${QETA_SRC}"
+
+    qcmd git clone git@github.com:redbeacon/test-common.git
+    if [ ! ":${qcmd_result_code}" == ":0" ] ; then
+        qlog fatal "I couldn't get test-common to download!" 99
+    fi
+fi
+
+qcmd [ ! -d "${QETA_SRC}/test-common" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    message="I was unable to clone git@github.com:redbeacon/test-common.git\n"
+    message+="see the log for the output, maybe that will help"
+    qlog fatal "${message}" 99
+fi
+
+qlog comment "testcommon presence VERIFIED OK"
+
+qlog comment "installing testcommon hooks..."
+qcmd cd ${QETA_SRC}/test-common
+qcmd ${QETA_SRC}/test-common/tools/hooks/install.sh
+
+qlog comment "Validating existance of test-common: Done"
+
+
+################################################################################
+# Section:
+#   cleanup docker artifacts
+#
+# TODO: move all this to a module.docker
+#
+################################################################################
+qlog print "Starting cleanup..."
+
+getdockerrunning_now="$(getdockerrunning)"
+# (note, cannot qcmd a function)
+qcmd [ ":${getdockerrunning_now}" == ":True" ]
+
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    qlog print "Cleaning up dangling docker artifacts..."
+
+    qlog comment "Looking for dangling images..."
+    docker_stuff="$(docker images -f dangling=true -q)"
+    if [ -n "${docker_stuff}" ] ; then
+        docker_stuff=$(docker images -f dangling=true -q | awk "{print $3}")
+    fi
+    qlog debug "$ docker_stuff=${docker_stuff}"
+
+    if [ ! ":${docker_stuff}" == ":" ] ; then
+        qlog debug "$ [ \$docker_stuff == \"\" ] == False"
+        qcmd docker rmi -f "${docker_stuff}"
+    fi
+
+    qlog comment "Looking for dangling volumes..."
+    docker_stuff="$(docker volume ls -qf dangling=true)"
+    qlog comment "${docker_stuff}"
+
+    if [ ! ":${docker_stuff}" == ":" ] ; then
+        qlog comment "docker removing dangling volumes..."
+        qcmd docker volume rm -f "${docker_stuff}"
+    fi
+
+    qcmd docker system prune -f
+fi
+
+################################################################################
+# Section:
+#   clean install
+#
+################################################################################
+qlog print "Checking for -C (force clean install)..."
+
+qcmd [ ":${_refreshqeta_mode_clean}" == ":True" ]
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+
+    qlog print "refreshqeta MODE CLEAN. CLEANING!!!"
+    qlog print "CLEANING: Checking selenium server..."
+    qcmd "stopselenium"
+
+    qlog print "CLEANING: Removing files to be replaced..."
+    removeme "${QETA_FRAMEWORK}/environment/*"
+    removeme "${QETA_FRAMEWORK}/environment.host/*"
+
+    getdockerrunning_now="$(getdockerrunning)"
+    # (note, cannot qcmd a function)
+    qcmd [ ":${getdockerrunning_now}" == ":True" ]
+    if [ ":${qcmd_result_code}" == ":1" ] ; then
+        # these commands should only be run while the docker service is live
+        qlog print "Resetting test container..."
+        qcmd docker rmi -f gcr.io/np-homeservices/test-framework:master
+
+        qlog print "Removing all old docker containers..."
+        qcmd docker_stuff=$(docker ps -a -q)
+        if [ ! ":${dockerstuff}" == ":" ] ; then
+            qcmd docker rm -f $docker_stuff
+        fi
+
+        qlog print "Removing all old docker images..."
+        qcmd docker_stuff=$(docker ps -a -q)
+        if [ ! ":${dockerstuff}" == ":" ] ; then
+            qcmd docker rmi -f $docker_stuff
+        fi
+
+        qlog print "Halting docker"
+        qcmd killall Docker
+    fi
+
+    # halt docker
+    qlog debug "process_to_kill=\$(ps -e | grep com.docker.vmnetd | awk '{print $1}')"
+    process_to_kill=$(ps -e | grep com.docker.vmnetd | awk '{print $1}')
+    if [ -n "${process_to_kill}" ] ; then
+        qcmd sudo -A kill -9 "${process_to_kill}"
+    fi
+
+    qcmd stopselenium
+
+    remove_os_packages
+
+    removeme "/Applications/Docker.app"
+    removeme "/Applications/Firefox.app"
+
+fi
+
+qlog comment "Checking for -C (force clean install): Done"
+
+
+################################################################################
+# Section:
+#   package_installs
+#
+################################################################################
+qlog print "Validating remaining installs are current..."
+
+install_os_packages
+
+qlog comment "Validating remaining installs are current: Done"
+
+################################################################################
+# Section:
+#   gcloud auth
+#
+################################################################################
+qlog print "Authenticating in gcr"
+
+export PATH="/usr/bin:/usr/local/bin:$PATH"
+qlog print "refreshqeta gcloud set user..."
+gcloud_user=$(gcloud auth list --format="value(account)")
+if [ -z "${gcloud_user}" ] ; then
+    qcmd "gcloud auth login"
+else
+    qlog print "User was authenticated"
+fi
+
+# Do this all the time since it doesn't hurt
+gcloud components update
+qcmd "gcloud config set project np-homeservices"
+qcmd "gcloud auth configure-docker -q"
+
+qlog comment "Authenticating in gcr: Done"
+
+
+################################################################################
+# Section:
+#   install_git_completion
+#
+################################################################################
+qlog print "Updating git-completion..."
+
+removeme ${QETA_HOME}/git-completion.bash
+qcmd curl -o ${QETA_HOME}/bin/git-completion.bash https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
+
+qlog comment "Updating git-completion: Done"
+
+
+################################################################################
+# Section:
+#   package_installs
+#
+################################################################################
+qlog print "Validating local repos current (that aren't dirty)..."
+
+qcmd cd "${QETA_SRC}"
+qcmd "dirs=\$(ls)"
+
+for dir in $dirs; do
+    qlog print "Checking ./${dir}: "
+    qcmd [ -d "${QETA_SRC}/${dir}" ]
+    if [ ":${qcmd_result_code}" == ":0" ] ; then
+        qcmd cd ${QETA_SRC}/${dir}
+        qcmd [ -d .git ]
+        if [ ":${qcmd_result_code}" == ":0" ] ; then
+            qcmd git_starting_branch=$(getgitbranch)
+            qcmd git_starting_branch_is_dirty=$(getgitdirty)
+
+            qcmd [ ! ":${git_starting_branch_is_dirty}" == ":True" ]
+            if [ ":${qcmd_result_code}" == ":0" ] ; then
+                qcmd git pull
+            else
+                qlog comment "Uncommitted changes on ${git_starting_branch}"
+                qlog comment "doing nothing."
+            fi
+        else
+            qlog comment "Not a git repo."
+        fi
+    else
+        qlog comment "Not a folder."
+    fi
+done
+
+unset dir
+unset dirs
+
+qlog comment "Validating local repos current (that aren't dirty): Done"
+
+
+################################################################################
+# Section:
+#   fetchtestcontainer
+#
+#
+################################################################################
+
+# Always pull the latest image
+qlog print "Pulling latest image..."
+qcmd docker pull gcr.io/np-homeservices/test-framework:master
+qlog print "Pulling latest image...: Done"
+
+
+################################################################################
+# Section:
+#   check_for_user_referesher
+#
+################################################################################
+qlog print "Checking for user specific refreshqeta updater..."
+
+qcmd "[ -e ${QETA_FRAMEWORK}/user/refreshqeta ]"
+if [ ":${qcmd_result_code}" == ":0" ] ; then
+    qlog print "Launching ${QETA_FRAMEWORK}/user/refreshqeta"
+    source ${QETA_FRAMEWORK}/user/refreshqeta $@
+    qlog comment "user's refreshqeta complete, now resuming refreshqeta"
+fi
+
+qlog comment "Checking for user specific refreshqeta updater: Done"
+
+
+################################################################################
+# Section:
+#   check_for_key_files
+#
+################################################################################
+qlog print "Verifying key files..."
+checkfile_failed=""
+function checkfile() {
+    if [ -f "${1}" ] ; then
+        result=PASSED
+    else
+        result=FAILED
+    fi
+    if [ $result == FAILED ] ; then
+        if [ $2 == fatal ] ; then
+            checkfile_failed+="${1} FAILED\n"
+        fi
+    fi
+    qlog print "${1} ${result}"
+}
+
+# we could check every file needed by the system, but I decided to only pick some
+# key ones that we'd need ongoingly.
+checkfile "${QETA_BIN}/starttestcontainer" fatal
+checkfile "${QETA_BIN}/starttest" fatal
+
+if [ "$(uname -s)" == "Darwin" ] ; then
+    checkfile "/usr/local/bin/gcloud" fatal
+    checkfile "/usr/local/bin/docker" fatal
+    checkfile "/usr/local/bin/chromedriver" fatal
+    checkfile "/usr/bin/java" fatal
+fi
+
+if [ "${checkfile_failed}" != "" ] ; then
+    qlog fatal "key files were missing!\n${checkfile_failed}"
+fi
+qlog comment "Verifying key files: Done"
+
+
+################################################################################
+# Section:
+#   check_for_reset_security
+#
+################################################################################
+qlog print "wrapping up..."
+unset SUDO_ASKPASS
+unset noop
+removeme ${QETA_HOME}/Downloads/refreshqeta
+
+
+################################################################################
+# Section:
+#   check_for_user_referesher
+#
+################################################################################
+test -z "${QETA_FRAMEWORK}/user/user_refresh_qeta" && source "${QETA_FRAMEWORK}/user/user_refresh_qeta"
+
+################################################################################
+# Section:
+#   grab random stuff from elsewhere
+#
+################################################################################
+qlog comment "$EIGHTYPOUNDS"
+qlog comment "Dumping .bash_profile to log"
+qaddfile ${QETA_HOME}/.bash_profile
+qlog bash --version
+qlog comment "$EIGHTYPOUNDS"
+qlog comment "Dumping git to log"
+qcmd git --version
+qcmd git branch -vv
+qcmd git stash list
+qcmd git status
+qlog comment "$EIGHTYPOUNDS"
+qlog comment "Dumping version info on a selected set of tools to log"
+qcmd brew --version
+qcmd docker --version
+qcmd docker-compose --version
+qcmd java -version
+qlog comment "$EIGHTYPOUNDS"
+
+################################################################################
+# Section:
+#   check_for_user_wrap_up_report
+#
+################################################################################
+qlog print "Final wrap up..."
+
+message="Please close and restart all your terminal windows"
+if [ -f ${QETA_SRC}/framework/logs/softwareupdate.log ] ; then
+    # file exists
+    cat ${QETA_SRC}/framework/logs/softwareupdate.log | grep "restart" > /dev/null 2>&1
+    if [ $? ==  0 ] ; then
+        message="A REBOOT IS REQUIRED! PLEASE RESTART YOUR COMPUTER NOW!"
+    fi
+fi
+qlog print ""
+qlog print ""
+qlog print "$EIGHTYPOUNDS"
+qlog print "$message"
+qlog print "$EIGHTYPOUNDS"
+qlog print ""
+qlog print $0 $@
+qlog print "Started at:   ${refreshqeta_start_time_stamp}"
+qlog print "Completed at: $(date)"
+endtime=`date +%s`
+SECONDS=$((endtime - refreshqeta_start_time_seconds))
+qlog print "Elapsed Time: $((($SECONDS / 60))):$(printf "%02d" $(($SECONDS % 60)))"
