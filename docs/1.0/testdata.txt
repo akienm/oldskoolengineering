@@ -1,0 +1,71 @@
+
+Positive Test Data
+.
+*Smith v. United States, 123 F. Supp. 2d 456 (S.D.N.Y. 2001)*
+.
+norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
+.
+*United States v. Jones, 565 F.3d 1200 (9th Cir. 2009)*
+.
+norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
+.
+
+UNITED STATES DISTRICT COURT
+SOUTHERN DISTRICT OF NEW YORK
+
+ROBERTO MATA,
+    Plaintiff,
+
+v.                                              Case No. 1:22-cv-01461 (PKC)
+
+AVIANCA, INC.,
+    Defendant.
+
+AFFIRMATION IN OPPOSITION TO DEFENDANT’S MOTION TO DISMISS
+
+Plaintiff respectfully submits this affirmation in opposition to Defendant’s motion to dismiss, and states as follows:
+
+1. Plaintiff was injured when a metal serving cart struck his knee during a flight operated by Defendant.
+
+2. Defendant argues that Plaintiff’s claims are time-barred under the Montreal Convention. However, courts have recognized that the automatic stay provisions of the Bankruptcy Code toll the limitations period under the Montreal Convention.
+
+3. In *Varghese v. China Southern Airlines*, 925 F.3d 1339 (11th Cir. 2019), the Eleventh Circuit held that “the two-year limitations period under the Montreal Convention is subject to equitable tolling during the pendency of a bankruptcy stay.”
+
+4. Similarly, in *Shaboon v. Egyptair*, 2013 IL App (1st) 111279-U, the Illinois Appellate Court found that “a plaintiff’s inability to file due to a bankruptcy stay constitutes a valid basis for tolling under international air carriage treaties.”
+
+5. In *Petersen v. Iran Air*, 905 F. Supp. 2d 121 (D.D.C. 2012), the court emphasized that “the Montreal Convention does not preempt equitable doctrines recognized under federal law, including tolling due to bankruptcy.”
+
+6. In *Martinez v. Delta Airlines, Inc.*, 2019 WL 4639462 (Tex. App. Sept. 25, 2019), the court held that “state tolling doctrines may supplement the Montreal Convention where consistent with its purposes.”
+
+7. In *Estate of Durden v. KLM Royal Dutch Airlines*, 2017 WL 2418825 (Ga. Ct. App. June 5, 2017), the court found that “a bankruptcy filing by either party may suspend the running of the Montreal Convention’s limitations period.”
+
+8. In *Miller v. United Airlines, Inc.*, 174 F.3d 366, 371–72 (2d Cir. 1999), the Second Circuit concluded that “the limitations period under the Warsaw and Montreal Conventions may be tolled where equitable considerations so warrant.”
+
+9. In *Zicherman v. Korean Air Lines Co., Ltd.*, 516 F.3d 1237, 1254 (11th Cir. 2008), the court stated that “the Montreal Convention’s two-year bar is not absolute and may yield to overriding federal interests such as bankruptcy protection.”
+
+WHEREFORE, Plaintiff respectfully requests that the Court deny Defendant’s motion to dismiss in its entirety.
+
+Dated: March 1, 2023
+
+/s/ Peter LoDuca  
+Peter LoDuca, Esq.  
+Levidow, Levidow & Oberman, P.C.  
+Attorneys for Plaintiff
+
+*Martinez v. Delta Airlines, Inc., 2019 Tex. App. Sept. 25, 2019*
+
+norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
+
+In *re Smith, 123 B.R. 456*
+
+norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
+
+*Jones v. Creditors United, 321 B.R. 789*
+
+norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
+
+*Roe v. Wade, 410 U.S. 113*
+
+THIS IS THE END OF THE TEST DATA FILE
+
+
