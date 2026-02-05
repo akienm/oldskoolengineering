@@ -66,15 +66,15 @@
             }
         ]
     },
-    { "LookupClassess": 
+    { "LookupClasses": 
         [
             {
                 "LookupClassName": "CourtListener",
                 "SubOf": "BaseLookup",
-                "CitationURL": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
+                "url": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
                 "EnvKeyName": "COURTLISTENER_KEY",
                 "ExpectedFields": ["case_name", "volume", "reporter", "page"],
-                "XOR": ["case_name", "reporter"]
+                "XOR": [["case_name", "reporter"]]
             }
         ]
     }

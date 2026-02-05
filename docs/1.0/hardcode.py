@@ -12,18 +12,19 @@ def lookup_structured_citation():
         "Authorization": f"Token {key}"
     }
     data = {
-        "reporter": "F.3d",
+        "text": "United States Ex Rel. Meyer v. Horizon Health Corp.",
+        "reporter": "",  # F.3d",
         "volume": "565",
         "page": "1200"
     }
 
+    print(f'')
     response = requests.post(url, json=data, headers=headers)
 
     if response.status_code == 200:
         result = response.json()
         print("✅ Found citation:")
-        print(f"  Case: {result.get('caseName')}")
-        print(f"  URL: https://www.courtlistener.com{result.get('absolute_url')}")
+        print(f"  Case: {result}")
     else:
         print(f'headers: {headers}')
         print(f"❌ Error {response.status_code}: {response.text}")

@@ -1,10 +1,11 @@
 
 from collections import OrderedDict
-import re
-import unicodedata
 
 import json
 import os
+import re
+import requests
+import unicodedata
 
 CLASS_REGISTRY = "class_registry"
 master_config = {
@@ -59,9 +60,41 @@ class ImportedClass:
                     master_config[category_name].append(new_class)
 
 class BaseLookup(ImportedClass):
-    pass
+    key = None
+
+    def unit(cls, file_name=None):
+        for line from excel file (file_name):
+            the_tuple = (colums from line as tuple)
+            the instance = 
+    def __init__(self, citation_instance):
+        self.citation = citation_instance
+
+    def lookup(self):
+        if not self.__class__.key:
+            self.__class__.key = os.getenv(self.EnvKeyName, None)
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Token {self.__class__.key}"
+        }
+        # TODO: PROTOTYPE CODE - FIX THIS!
+        data = {}
+        data['text'] = self.citation.case_name
+        # data['reporter'] = ""
+        data["volume"] = self.citation.volume
+        data["page"] = self.citation.page
+
+        self.response = requests.post(self.url, json=data, headers=headers)
+        print(f'/n{self.response._content}\n\n')
+
+        if self.response.status_code == 200:
+            self.lookup_result = "✅"  
+        else:
+            self.lookup_result = "❌" 
+        return self.lookup_result
 
 class BaseCitation(ImportedClass):
+
+    lookup_engine = None # this one is a class variable
 
     # Here to define the workings, but overridden in _init_
     exists = None
@@ -75,7 +108,7 @@ class BaseCitation(ImportedClass):
     _raw_text = None
     
     @classmethod
-    def test_text(cls, text):
+    def collect_instances(cls, text):
         # This method will return a list of citation class instances for this class
         matches = re.findall(cls.regex, text)
         results = []
@@ -146,47 +179,71 @@ class BaseCitation(ImportedClass):
         return self._raw_text
 
     def lookup(self):
-        raise NotImplementedError
+        if not self.lookup_engine:
+            for LookupClass in master_config["LookupClasses"]:
+                if self.normalizing_fields == LookupClass.ExpectedFields:
+                    # now give us an instance all members of the
+                    # class will share... can you say single login?
+                    self.__class__.lookup_engine = LookupClass(self)
+                    break
+        if self.lookup_engine:
+            # import pdb ; pdb.set_trace()
+            return self.lookup_engine.lookup()
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self._raw_text}>"
 
+#                "CitationClassName": "FederalCaseCitation",
+#                "SubOf": "BaseCitation",
+#                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
+#                "match_fields": ["case_name", "volume", "reporter", "page"],
+#                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
 
+# master init
+def master_init():
+    # read the config
+    ImportedClass.read_config_dat()
+    # master_config is now set, has loaded CitationClasses and LookupClasses
+    print(master_config)
 
-# read the config
-ImportedClass.read_config_dat()
-# master_config is now set, has loaded CitationClasses and LookupClasses
+    master_config.current_lookup_class = master_config["LookupClasses"][0]
+master_init()
 
-# Path to the test file
-testfile = './testdata.txt'
-print('\n' * 20)
-print('----------' * 6)
-print('')
-print(f'Testing file: {testfile}')
+def scan_file_test():
+    # Path to the test file
+    testfile = './testdata.txt'
+    print('\n' * 20)
+    print('----------' * 6)
+    print('')
+    print(f'Testing file: {testfile}')
 
-# Read the test file
-with open(testfile, "r", encoding="utf-8") as f:
-    text = f.read()
+    # Read the test file
+    with open(testfile, "r", encoding="utf-8") as f:
+        text = f.read()
 
-# normalize it
-text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-text = re.sub(r'\s+', ' ', text)
+    # normalize it
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r'\s+', ' ', text)
 
-# and start the scan:
-print(f'Testing file: Read and filter complete. Length {len(text)}')
-print('')
-print('Now processing file...')
-print('-----------------')
-result_text = ''
+    # and start the scan:
+    print(f'Testing file: Read and filter complete. Length {len(text)}')
+    print('')
+    print('Now processing file...')
+    print('-----------------')
+    result_text = ''
 
-if True:
-    for CitationType in master_config["CitationClasses"]:
-        print(f'{CitationType}')
-        results = CitationType.test_text(text)
-        if results:
-            for item in results:
-                result_text += f"{CitationType} Match: {item}\n"
-                print(f'FOUND {item}')
-        else:
-            print(f'NO FINDS ON regex={regex}')
-        result_text += '-----------------\n'
+    if True:
+        for CitationType in master_config["CitationClasses"]:
+            print((f':::{CitationType.CitationClassName}'+('-'*80))[:80])
+
+            results = CitationType.collect_instances(text)
+            if results:
+                for item in results:
+                    result_text += f"{CitationType} Match: {item}\n"
+                    print(f'FOUND {item}{item.lookup()}')
+            else:
+                print(f'NO FINDS ON regex={regex}')
+            result_text += '-----------------\n'
+
+def perform_lookup_test():
+    
