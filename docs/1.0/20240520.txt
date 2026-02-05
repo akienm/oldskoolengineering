@@ -1,0 +1,16 @@
+# GOOD:
+*Riley v. California, 573 U.S. 373 (2014)*
+*Burwell v. Hobby Lobby Stores, Inc., 573 U.S. 682 (2014)*
+*Heien v. North Carolina, 574 U.S. 54 (2014)*
+*Integrity Staffing Solutions, Inc. v. Busk, 574 U.S. 27 (2014)*
+*Dart Cherokee Basin Operating Co. v. Owens, 574 U.S. 81 (2014)*
+*United States v. Auernheimer, 748 F.3d 525 (3d Cir. 2014)*
+*United States v. Newman, 773 F.3d 438 (2d Cir. 2014)*
+# BAD:
+*United States v. Smith, 999 F.3d 999* (nonexistent volume/page)
+*People v. Jones, 123 U.S. 456* (state case misattributed to SCOTUS)
+*Riley v. California, 573 F.4th 373* (wrong reporter series)
+*United States v. Newman, 773 F.3d 9999* (invalid page number)
+*United States v. Doe, 000 F.3d 000* (placeholder citation)
+*United States v. Jones, 565 F.3d 1200* (wrong case for 2023 D.D.C. opinion)
+*United States v. Johnson, No. 1:99-cr-999* (sealed or nonexistent docket)
