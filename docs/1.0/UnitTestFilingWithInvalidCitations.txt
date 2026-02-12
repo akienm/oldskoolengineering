@@ -1,15 +1,4 @@
 
-Positive Test Data
-.
-*Smith v. United States, 123 F. Supp. 2d 456 (S.D.N.Y. 2001)*
-.
-norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
-.
-*United States v. Jones, 565 F.3d 1200 (9th Cir. 2009)*
-.
-norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
-.
-
 UNITED STATES DISTRICT COURT
 SOUTHERN DISTRICT OF NEW YORK
 
@@ -47,25 +36,9 @@ WHEREFORE, Plaintiff respectfully requests that the Court deny Defendant’s mot
 
 Dated: March 1, 2023
 
-/s/ Peter LoDuca  
-Peter LoDuca, Esq.  
-Levidow, Levidow & Oberman, P.C.  
+/s/ Peter LoDuca
+Peter LoDuca, Esq.
+Levidow, Levidow & Oberman, P.C.
 Attorneys for Plaintiff
 
-*Martinez v. Delta Airlines, Inc., 2019 Tex. App. Sept. 25, 2019*
-
-norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
-
-In *re Smith, 123 B.R. 456*
-
-norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
-
-*Jones v. Creditors United, 321 B.R. 789*
-
-norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle norgle 
-
-*Roe v. Wade, 410 U.S. 113*
-
 THIS IS THE END OF THE TEST DATA FILE
-
-

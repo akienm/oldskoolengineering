@@ -1,5 +1,6 @@
 
 from collections import OrderedDict
+from pprint import pprint as pp
 
 import json
 import os
@@ -7,18 +8,27 @@ import re
 import requests
 import unicodedata
 
-CLASS_REGISTRY = "class_registry"
-master_config = {
-   CLASS_REGISTRY : {}
-}
+unit_test_citations = '.\\UnitTestCitations.txt'
+unit_test_filing_with_invalid_citations = '.\\UnitTestFilingWithInvalidCitations.txt'
+
+CLASS_REGISTRY = "CLASS_REGISTRY"
+class SmartDict(OrderedDict):
+    def show():
+        pp(self.__dict__)
+
+master_config = SmartDict()
+master_config[CLASS_REGISTRY] = SmartDict()
+
 
 class ImportedClass:
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
+        global master_config
+        my_name = cls.__name__
         registry = master_config[CLASS_REGISTRY]
-        if cls.__name__ not in registry:
-            registry[cls.__name__] = cls
+        if my_name not in registry:
+            registry[my_name] = cls
 
     @classmethod
     def read_config_dat(cls, data_source_file=None):
@@ -30,10 +40,9 @@ class ImportedClass:
 
         try:
             with open(data_source_file, "r", encoding="utf-8") as f:
-                config_data = json.load(f, object_pairs_hook=OrderedDict)
-        except Exception as e: 
+                config_data = json.load(f, object_pairs_hook=SmartDict)
+        except Exception as e:
             print(e)
-            import pdb ; pdb.set_trace()
 
         for section in config_data:
             for category_name, class_defs in section.items():
@@ -62,10 +71,6 @@ class ImportedClass:
 class BaseLookup(ImportedClass):
     key = None
 
-    def unit(cls, file_name=None):
-        for line from excel file (file_name):
-            the_tuple = (colums from line as tuple)
-            the instance = 
     def __init__(self, citation_instance):
         self.citation = citation_instance
 
@@ -77,7 +82,7 @@ class BaseLookup(ImportedClass):
             "Authorization": f"Token {self.__class__.key}"
         }
         # TODO: PROTOTYPE CODE - FIX THIS!
-        data = {}
+        data = SmartDict()
         data['text'] = self.citation.case_name
         # data['reporter'] = ""
         data["volume"] = self.citation.volume
@@ -87,9 +92,9 @@ class BaseLookup(ImportedClass):
         print(f'/n{self.response._content}\n\n')
 
         if self.response.status_code == 200:
-            self.lookup_result = "✅"  
+            self.lookup_result = "✅"
         else:
-            self.lookup_result = "❌" 
+            self.lookup_result = "❌"
         return self.lookup_result
 
 class BaseCitation(ImportedClass):
@@ -103,10 +108,11 @@ class BaseCitation(ImportedClass):
     normalizing_fields = None
     regex = None
 
+    # Private members
     _matches_found = None
     _normalized = None
     _raw_text = None
-    
+
     @classmethod
     def collect_instances(cls, text):
         # This method will return a list of citation class instances for this class
@@ -165,8 +171,8 @@ class BaseCitation(ImportedClass):
     def normalized(self):
         if self._normalized:
             return self._normalized
-        self._normalized = OrderedDict()
-        # This could be shorter, but not more readable ;) 
+        self._normalized = SmartDict()
+        # This could be shorter, but not more readable ;)
         for index in range(0, len(self.normalizing_fields)):
             match_field_name = self.match_fields[index]
             match_field_value = getattr(self, match_field_name)
@@ -187,31 +193,29 @@ class BaseCitation(ImportedClass):
                     self.__class__.lookup_engine = LookupClass(self)
                     break
         if self.lookup_engine:
-            # import pdb ; pdb.set_trace()
             return self.lookup_engine.lookup()
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self._raw_text}>"
 
-#                "CitationClassName": "FederalCaseCitation",
-#                "SubOf": "BaseCitation",
-#                "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
-#                "match_fields": ["case_name", "volume", "reporter", "page"],
-#                "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+# "CitationClassName": "FederalCaseCitation",
+# "SubOf": "BaseCitation",
+# "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
+# "match_fields": ["case_name", "volume", "reporter", "page"],
+# "normalizing_fields": ["case_name", "volume", "reporter", "page"]
 
 # master init
 def master_init():
     # read the config
     ImportedClass.read_config_dat()
     # master_config is now set, has loaded CitationClasses and LookupClasses
-    print(master_config)
-
+    # print(master_config)
     master_config.current_lookup_class = master_config["LookupClasses"][0]
 master_init()
 
 def scan_file_test():
     # Path to the test file
-    testfile = './testdata.txt'
+    testfile = unit_test_filing_with_invalid_citations
     print('\n' * 20)
     print('----------' * 6)
     print('')
@@ -232,18 +236,30 @@ def scan_file_test():
     print('-----------------')
     result_text = ''
 
-    if True:
-        for CitationType in master_config["CitationClasses"]:
-            print((f':::{CitationType.CitationClassName}'+('-'*80))[:80])
+    for CitationType in master_config["CitationClasses"]:
+        # print((f':::{CitationType.CitationClassName}'+('-'*80))[:80])
 
-            results = CitationType.collect_instances(text)
-            if results:
-                for item in results:
-                    result_text += f"{CitationType} Match: {item}\n"
-                    print(f'FOUND {item}{item.lookup()}')
-            else:
-                print(f'NO FINDS ON regex={regex}')
-            result_text += '-----------------\n'
+        found_citation_instances = CitationType.collect_instances(text)
+        if found_citation_instances:
+            for current_citation in found_citation_instances:
+                result_text += f"✅ {CitationType} Match: {current_citation}\n"
+        else:
+            result_text += f'❌ {CitationType}:{current_citation}'
+        result_text += '-----------------\n'
+    print(result_text)
 
 def perform_lookup_test():
-    
+    filename = unit_test_citations
+    with open(filename, 'r', encoding='utf-8') as f:
+        file_lines = f.readlines()
+    for line in file_lines:
+        line = line.strip()
+        if not line:
+            continue # skip comments and blank lines
+        if line[0] == '#':
+            continue # skip comments and blank lines
+        else:
+            # OK so now line has a citation in it wrapdbpped with **
+            print(line)
+
+perform_lookup_test()
