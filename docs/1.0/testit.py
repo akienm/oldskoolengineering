@@ -3,10 +3,42 @@ from collections import OrderedDict
 from pprint import pprint as pp
 
 import json
+import logging
 import os
 import re
 import requests
+import sys
 import unicodedata
+
+
+def setup_logging():
+    # Get the base name of the script (e.g., testit.py → testit.log)
+    script_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+    log_filename = f"{script_name}.log"
+
+    # Create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)  # Capture everything
+
+    # File handler (DEBUG and above)
+    file_handler = logging.FileHandler(log_filename, mode='w', encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    file_handler.setFormatter(file_formatter)
+
+    # Console handler (INFO and above)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('[%(levelname)s] %(message)s')
+    console_handler.setFormatter(console_formatter)
+
+    # Add handlers
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+setup_logging()
+
+
 
 unit_test_citations = '.\\UnitTestCitations.txt'
 unit_test_filing_with_invalid_citations = '.\\UnitTestFilingWithInvalidCitations.txt'
@@ -248,18 +280,73 @@ def scan_file_test():
         result_text += '-----------------\n'
     print(result_text)
 
+
+def lookup_citation(citation):
+    url = "https://www.courtlistener.com/api/rest/v3/search/"
+    params = {
+        "q": citation,
+    }
+    headers = {
+        "Accept": "application/json"
+    }
+
+    # Optional: include token if available
+    token = os.getenv('COURTLISTENER_KEY')
+    if token:
+        headers["Authorization"] = f"Token {token}"
+
+    logging.debug(f'url={url}')
+    logging.debug(f'params={params}')
+    logging.debug(f'headers={headers}')
+    logging.debug('GETTING...')
+
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        logging.debug("Response Details:")
+        logging.debug(f"  Status Code: {response.status_code}")
+        logging.debug(f"  Headers: {response.headers}")
+        logging.debug(f"  Encoding: {response.encoding}")
+
+        if response.text.lstrip().lower().startswith("<!doctype html>"):
+            logging.debug("  Text: 404 Page HTML")
+            return []
+        else:
+            logging.debug(f"  Text: {response.text[:50]}")
+            try:
+                json_data = response.json()
+                logging.debug(f"  JSON: {json_data}")
+                return json_data.get("results", [])
+            except Exception as e:
+                logging.debug(f"  JSON decode failed: {e}")
+                return []
+    except requests.RequestException as e:
+        logging.error(f"❌ Request failed for '{citation}': {e}")
+        return []
+
 def perform_lookup_test():
     filename = unit_test_citations
     with open(filename, 'r', encoding='utf-8') as f:
         file_lines = f.readlines()
+
     for line in file_lines:
         line = line.strip()
-        if not line:
-            continue # skip comments and blank lines
-        if line[0] == '#':
-            continue # skip comments and blank lines
+        if not line or line.startswith('#'):
+            logging.debug(f'comment: {line}')
+            continue
+
+        # Extract the citation string from between the asterisks
+        if line.startswith('*') and line.endswith('*'):
+            citation_text = line.strip('*').strip()
         else:
-            # OK so now line has a citation in it wrapdbpped with **
-            print(line)
+            citation_text = line
+
+        logging.info(f"Looking up: {citation_text}")
+        result = lookup_citation(citation_text)
+
+        if result:
+            logging.info(f"✅ Found: {result[0].get('case_name', 'Unknown')} — {result[0].get('citation', 'No citation')}")
+        else:
+            logging.error(f"❌ No match found for: {citation_text}")
+
 
 perform_lookup_test()
