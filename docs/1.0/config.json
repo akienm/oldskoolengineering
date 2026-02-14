@@ -1,0 +1,53 @@
+{
+  "CitationClasses": [
+    {
+      "CitationClassName": "GeneralFederalCitation",
+      "SubOf": "BaseCitation",
+      "regexes": [
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?config.*, (\\d+) (F\\. Supp\\.? ?2d?) (\\d+)",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (U\\.S\\.) (\\d+)",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (B\\.R\\.) (\\d+)"
+      ],
+      "match_fields": ["case_name", "volume", "reporter", "page"],
+      "normalizing_fields": ["case_name", "volume", "reporter", "page"],
+      "lookup": {
+        "LookupClassName": "CourtListener",
+        "url": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
+        "EnvKeyName": "COURTLISTENER_KEY",
+        "ExpectedFields": ["case_name", "volume", "reporter", "page"],
+        "XOR": [["case_name", "reporter"]]
+      }
+    },
+    {
+      "CitationClassName": "StateCitation",
+      "SubOf": "BaseCitation",
+      "regexes": [
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) IL App \\((\\d+[a-z]*)\\) (\\d+[-U]*)",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) ([A-Z][a-z]+\\.) App\\. ?,? ([A-Za-z]+\\. \\d{1,2}, \\d{4})",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) ([A-Z]\\.3d) (\\d+)"
+      ],
+      "match_fields": ["case_name", "volume", "reporter", "page"],
+      "normalizing_fields": ["case_name", "volume", "reporter", "page"],
+      "lookup": {
+        "LookupClassName": "CourtListener",
+        "url": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
+        "EnvKeyName": "COURTLISTENER_KEY",
+        "ExpectedFields": ["case_name", "volume", "reporter", "page"],
+        "XOR": [["case_name", "reporter"]]
+      }
+    },
+    {
+      "CitationClassName": "UnsupportedCitation",
+      "SubOf": "BaseCitation",
+      "regexes": [
+        "(\\d{4}) WL (\\d+)"
+      ],
+      "match_fields": ["year", "wl_number"],
+      "normalizing_fields": ["year", "wl_number"],
+      "lookup": {
+        "supported": false
+      }
+    }
+  ]
+}
