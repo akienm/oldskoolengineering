@@ -10,6 +10,7 @@ import requests
 import sys
 import unicodedata
 
+from bannerizer import bannerize as bannerizecore
 
 def setup_logging():
     # Get the base name of the script (e.g., testit.py → testit.log)
@@ -45,14 +46,16 @@ unit_test_filing_with_invalid_citations = '.\\UnitTestFilingWithInvalidCitations
 
 CLASS_REGISTRY = "CLASS_REGISTRY"
 class SmartDict(OrderedDict):
-    def show():
-        pp(self.__dict__)
+    def show(self):
+        print(self.bannerize())
+    def bannerize(self):
+        return bannerizecore(self)
 
 master_config = SmartDict()
 master_config[CLASS_REGISTRY] = SmartDict()
 
 
-class ImportedClass:
+class ImportedClass(SmartDict):
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -280,9 +283,28 @@ def scan_file_test():
         result_text += '-----------------\n'
     print(result_text)
 
+def response_to_smartdict(response):
+    from collections import OrderedDict
+
+    sd = SmartDict()
+    sd["status_code"] = response.status_code
+    sd["headers"] = SmartDict(response.headers)
+    sd["url"] = response.url
+    sd["reason"] = response.reason
+    sd["elapsed"] = str(response.elapsed)
+    sd["encoding"] = response.encoding
+    sd["ok"] = response.ok
+    sd["history"] = [str(r) for r in response.history]
+    sd["cookies"] = SmartDict(response.cookies.get_dict())
+    try:
+        sd["json"] = SmartDict(response.json())
+    except Exception as e:
+        sd["text"] = response.text[:1000]  # truncate for safety
+        sd["json_error"] = str(e)
+    return sd
 
 def lookup_citation(citation):
-    url = "https://www.courtlistener.com/api/rest/v3/search/"
+    url = "https://www.courtlistener.com/api/rest/v4/search/"
     params = {
         "q": citation,
     }
@@ -299,29 +321,10 @@ def lookup_citation(citation):
     logging.debug(f'params={params}')
     logging.debug(f'headers={headers}')
     logging.debug('GETTING...')
-
-    try:
-        response = requests.get(url, params=params, headers=headers)
-        logging.debug("Response Details:")
-        logging.debug(f"  Status Code: {response.status_code}")
-        logging.debug(f"  Headers: {response.headers}")
-        logging.debug(f"  Encoding: {response.encoding}")
-
-        if response.text.lstrip().lower().startswith("<!doctype html>"):
-            logging.debug("  Text: 404 Page HTML")
-            return []
-        else:
-            logging.debug(f"  Text: {response.text[:50]}")
-            try:
-                json_data = response.json()
-                logging.debug(f"  JSON: {json_data}")
-                return json_data.get("results", [])
-            except Exception as e:
-                logging.debug(f"  JSON decode failed: {e}")
-                return []
-    except requests.RequestException as e:
-        logging.error(f"❌ Request failed for '{citation}': {e}")
-        return []
+    response = requests.get(url, params=params, headers=headers)
+    details = response_to_smartdict(response)
+    logging.debug(details.bannerize())
+    return details
 
 def perform_lookup_test():
     filename = unit_test_citations
@@ -344,9 +347,20 @@ def perform_lookup_test():
         result = lookup_citation(citation_text)
 
         if result:
-            logging.info(f"✅ Found: {result[0].get('case_name', 'Unknown')} — {result[0].get('citation', 'No citation')}")
+            try:
+                citation = result
+                if isinstance(citation, list):
+                    citation = citation[0]
+                citation = citation.get('citation', ['No citation'])
+                if isinstance(citation, list):
+                    citation = citation[0]
+                eq = '\n' + ('=' * 80) + '\n'
+                logging.debug(f'Citation = {eq}{pp(citation)}{eq}')
+                logging.info(f"✅ Found: {result[0].get('case_name', 'Unknown')} — {citation}")
+            except Exception as e:
+
+                logging.error(f'{e} result={result}')
         else:
             logging.error(f"❌ No match found for: {citation_text}")
-
 
 perform_lookup_test()
