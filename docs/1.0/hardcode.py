@@ -3,7 +3,6 @@ import requests
 
 
 
-comment='Session key'
 def lookup_structured_citation():
     key = os.getenv("COURTLISTENER_KEY", None)
     url = "https://www.courtlistener.com/api/rest/v4/citation-lookup/"

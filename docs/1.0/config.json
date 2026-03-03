@@ -4,19 +4,18 @@
       "CitationClassName": "GeneralFederalCitation",
       "SubOf": "BaseCitation",
       "regexes": [
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?config.*, (\\d+) (F\\. Supp\\.? ?2d?) (\\d+)",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?[ ,]?(\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\. Supp\\.? ?2d?) (\\d+)",
         "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (U\\.S\\.) (\\d+)",
         "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (B\\.R\\.) (\\d+)"
       ],
       "match_fields": ["case_name", "volume", "reporter", "page"],
       "normalizing_fields": ["case_name", "volume", "reporter", "page"],
       "lookup": {
-        "LookupClassName": "CourtListener",
+        "LookupProviderName": "CourtListener",
         "url": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
         "EnvKeyName": "COURTLISTENER_KEY",
-        "ExpectedFields": ["case_name", "volume", "reporter", "page"],
-        "XOR": [["case_name", "reporter"]]
+        "ExpectedFields": ["case_name", "volume", "reporter", "page"]
       }
     },
     {
@@ -30,11 +29,10 @@
       "match_fields": ["case_name", "volume", "reporter", "page"],
       "normalizing_fields": ["case_name", "volume", "reporter", "page"],
       "lookup": {
-        "LookupClassName": "CourtListener",
+        "LookupProviderName": "CourtListener",
         "url": "https://www.courtlistener.com/api/rest/v4/citation-lookup/",
         "EnvKeyName": "COURTLISTENER_KEY",
-        "ExpectedFields": ["case_name", "volume", "reporter", "page"],
-        "XOR": [["case_name", "reporter"]]
+        "ExpectedFields": ["case_name", "volume", "reporter", "page"]
       }
     },
     {

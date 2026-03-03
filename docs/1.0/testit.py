@@ -1,366 +1,186 @@
-
-from collections import OrderedDict
-from pprint import pprint as pp
-
-import json
-import logging
 import os
 import re
-import requests
-import sys
+import json
 import unicodedata
+import requests
+from amm_diagnostics import get_logger, SmartDict
 
-from bannerizer import bannerize as bannerizecore
+logger = get_logger()
 
-def setup_logging():
-    # Get the base name of the script (e.g., testit.py → testit.log)
-    script_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
-    log_filename = f"{script_name}.log"
-
-    # Create logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)  # Capture everything
-
-    # File handler (DEBUG and above)
-    file_handler = logging.FileHandler(log_filename, mode='w', encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-    file_handler.setFormatter(file_formatter)
-
-    # Console handler (INFO and above)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter('[%(levelname)s] %(message)s')
-    console_handler.setFormatter(console_formatter)
-
-    # Add handlers
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-setup_logging()
-
-
-
-unit_test_citations = '.\\UnitTestCitations.txt'
-unit_test_filing_with_invalid_citations = '.\\UnitTestFilingWithInvalidCitations.txt'
-
+# === Global Config ===
 CLASS_REGISTRY = "CLASS_REGISTRY"
-class SmartDict(OrderedDict):
-    def show(self):
-        print(self.bannerize())
-    def bannerize(self):
-        return bannerizecore(self)
-
 master_config = SmartDict()
 master_config[CLASS_REGISTRY] = SmartDict()
 
 
-class ImportedClass(SmartDict):
+# === Dynamic Class Loader ===
 
+class ImportedClass(SmartDict):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        global master_config
-        my_name = cls.__name__
-        registry = master_config[CLASS_REGISTRY]
-        if my_name not in registry:
-            registry[my_name] = cls
+        master_config[CLASS_REGISTRY][cls.__name__] = cls
+        logger.debug(f"Registered subclass: {cls.__name__}", obj=cls)
 
     @classmethod
-    def read_config_dat(cls, data_source_file=None):
-        global master_config
+    def read_config_dat(cls, data_source_file="config.json"):
+        logger.debug(f"Reading config from: {data_source_file}")
+        with open(data_source_file, "r", encoding="utf-8") as f:
+            config_data = json.load(f, object_pairs_hook=SmartDict)
 
-        if not data_source_file:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            data_source_file = os.path.join(script_dir, "config.dat")
+        for section, class_defs in config_data.items():
+            master_config[section] = []
+            for class_def in class_defs:
+                name_key = next((k for k in class_def if k.endswith("ClassName")), None)
+                class_name = class_def[name_key]
+                base_class_name = class_def.pop("SubOf", "ImportedClass")
+                base_class = master_config[CLASS_REGISTRY].get(base_class_name)
+                new_class = type(class_name, (base_class,), class_def)
+                master_config[section].append(new_class)
+                logger.debug(f"Created class: {class_name} (base: {base_class_name})", obj=new_class)
 
-        try:
-            with open(data_source_file, "r", encoding="utf-8") as f:
-                config_data = json.load(f, object_pairs_hook=SmartDict)
-        except Exception as e:
-            print(e)
 
-        for section in config_data:
-            for category_name, class_defs in section.items():
-                master_config[category_name] = []
-
-                for class_def in class_defs:
-                    class_fields = class_def.copy()
-
-                    # Determine class name
-                    name_key = next((k for k in class_fields if k.endswith("ClassName")), None)
-                    if not name_key:
-                        raise ValueError(f"No class name key found in {class_fields}")
-                    class_name = class_fields[name_key]
-
-                    # Determine base class
-                    base_class_name = class_fields.pop("SubOf", "ImportedClass")
-                    base_class = master_config[CLASS_REGISTRY].get(base_class_name, None)
-
-                    if not base_class:
-                        raise ValueError(f"Unknown base class: {base_class_name}")
-
-                    # Create the class
-                    new_class = type(class_name, (base_class,), class_fields)
-                    master_config[category_name].append(new_class)
-
-class BaseLookup(ImportedClass):
-    key = None
-
-    def __init__(self, citation_instance):
-        self.citation = citation_instance
-
-    def lookup(self):
-        if not self.__class__.key:
-            self.__class__.key = os.getenv(self.EnvKeyName, None)
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Token {self.__class__.key}"
-        }
-        # TODO: PROTOTYPE CODE - FIX THIS!
-        data = SmartDict()
-        data['text'] = self.citation.case_name
-        # data['reporter'] = ""
-        data["volume"] = self.citation.volume
-        data["page"] = self.citation.page
-
-        self.response = requests.post(self.url, json=data, headers=headers)
-        print(f'/n{self.response._content}\n\n')
-
-        if self.response.status_code == 200:
-            self.lookup_result = "✅"
-        else:
-            self.lookup_result = "❌"
-        return self.lookup_result
+# === Base Citation Class ===
 
 class BaseCitation(ImportedClass):
+    regexes = []
+    match_fields = []
+    normalizing_fields = []
+    lookup = {}
 
-    lookup_engine = None # this one is a class variable
-
-    # Here to define the workings, but overridden in _init_
-    exists = None
-    initializing_match = None
-    match_fields = None
-    normalizing_fields = None
-    regex = None
-
-    # Private members
-    _matches_found = None
-    _normalized = None
-    _raw_text = None
+    def __init__(self, match):
+        self.initializing_match = match
+        for i, field in enumerate(self.match_fields):
+            setattr(self, field, match[i])
+        self._raw_text = str(match)
+        self._normalized = SmartDict({
+            self.normalizing_fields[i]: match[i]
+            for i in range(len(self.normalizing_fields))
+        })
 
     @classmethod
     def collect_instances(cls, text):
-        # This method will return a list of citation class instances for this class
-        matches = re.findall(cls.regex, text)
         results = []
-        for match in matches:
-            if isinstance(match, str):
-                match = (match,)
-            new_instance = cls(match=match)
-            results.append(new_instance)
+        for regex in cls.regexes:
+            try:
+                matches = re.findall(regex, text)
+                for match in matches:
+                    if isinstance(match, str):
+                        match = (match,)
+                    results.append(cls(match))
+            except Exception as e:
+                logger.error(f"Regex error in {cls.__name__}: {e}", obj=cls)
         return results
-
-    def __init__(self, match=None, match_fields=None, normalizing_fields=None, regex=None):
-        # make everybody instance data
-        self.exists = type(self).exists
-        self.initializing_match = type(self).initializing_match
-        self.match_fields = type(self).match_fields
-        self.normalizing_fields = type(self).normalizing_fields
-        self.regex = type(self).regex
-        self._matches_found = type(self)._matches_found
-        self._normalized = type(self)._normalized
-        self._raw_text = type(self)._raw_text
-
-        # now let's check our args
-        if regex:
-            self.regex = regex
-        if normalizing_fields:
-            self.normalizing_fields = normalizing_fields
-        if match_fields:
-            self.match_fields = match_fields
-        self.initializing_match = match
-
-        # check status before continuing
-        if not self.initializing_match:
-            raise NotImplementedError("No match defined, TODO: this will go away")
-
-        if not self.match_fields:
-            raise NotImplementedError("No match_fields defined")
-        if not self.normalizing_fields:
-            raise NotImplementedError("No normalizing_fields defined")
-
-        #print(f'self.__class__.__name__ = {self.__class__.__name__}')
-        #print(f'self.initializing_match = {self.initializing_match}')
-        #print(f'self.match_fields = {self.match_fields}')
-        #print(f'self.normalization_fields = {self.match_fields}')
-
-        # now we can assume we got the match record, extract it's data
-        # and apply it as properties of the object
-        for index in range(0, len(self.match_fields)):
-            name = self.match_fields[index]
-            setattr(self, name, self.initializing_match[index])
-            #print(f'{name} = {self.initializing_match[index]}')
-        self._raw_text = f'{self.initializing_match}'
-
-    @property
-    def normalized(self):
-        if self._normalized:
-            return self._normalized
-        self._normalized = SmartDict()
-        # This could be shorter, but not more readable ;)
-        for index in range(0, len(self.normalizing_fields)):
-            match_field_name = self.match_fields[index]
-            match_field_value = getattr(self, match_field_name)
-            normalized_key_name = self.normalizing_fields[index]
-            self.normalized[normalized_key_name] = match_field_value
-        return self._normalized
-
-    @property
-    def raw_text(self):
-        return self._raw_text
-
-    def lookup(self):
-        if not self.lookup_engine:
-            for LookupClass in master_config["LookupClasses"]:
-                if self.normalizing_fields == LookupClass.ExpectedFields:
-                    # now give us an instance all members of the
-                    # class will share... can you say single login?
-                    self.__class__.lookup_engine = LookupClass(self)
-                    break
-        if self.lookup_engine:
-            return self.lookup_engine.lookup()
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self._raw_text}>"
 
-# "CitationClassName": "FederalCaseCitation",
-# "SubOf": "BaseCitation",
-# "regex": "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
-# "match_fields": ["case_name", "volume", "reporter", "page"],
-# "normalizing_fields": ["case_name", "volume", "reporter", "page"]
+    def lookup_courtlistener(self):
+        if not self.lookup or not self.lookup.get("supported", True):
+            return {"status": "unsupported", "reason": "Lookup not supported for this citation type."}
 
-# master init
+        url = self.lookup["url"]
+        token = os.getenv(self.lookup["EnvKeyName"])
+        if not token:
+            return {"status": "error", "reason": f"Missing API token in env var {self.lookup['EnvKeyName']}"}
+
+        payload = {field: self._normalized[field] for field in self.lookup["ExpectedFields"]}
+        headers = {"Authorization": f"Token {token}"}
+
+        try:
+            response = requests.post(url, data=payload, headers=headers, timeout=10)
+            result = response.json()
+            return {
+                "status_code": response.status_code,
+                "result": result,
+                "matched": response.status_code == 200
+            }
+        except Exception as e:
+            return {"status": "error", "reason": str(e)}
+
+
+# === Initialization ===
+
 def master_init():
-    # read the config
     ImportedClass.read_config_dat()
-    # master_config is now set, has loaded CitationClasses and LookupClasses
-    # print(master_config)
-    master_config.current_lookup_class = master_config["LookupClasses"][0]
-master_init()
+    logger.info("Citation engine initialized.")
 
-def scan_file_test():
-    # Path to the test file
-    testfile = unit_test_filing_with_invalid_citations
-    print('\n' * 20)
-    print('----------' * 6)
-    print('')
-    print(f'Testing file: {testfile}')
 
-    # Read the test file
-    with open(testfile, "r", encoding="utf-8") as f:
-        text = f.read()
+# === Utility ===
 
-    # normalize it
-    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r'\s+', ' ', text)
+def normalize_text(text):
+    return re.sub(r'\s+', ' ', unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii"))
 
-    # and start the scan:
-    print(f'Testing file: Read and filter complete. Length {len(text)}')
-    print('')
-    print('Now processing file...')
-    print('-----------------')
-    result_text = ''
 
-    for CitationType in master_config["CitationClasses"]:
-        # print((f':::{CitationType.CitationClassName}'+('-'*80))[:80])
+def scan_text_for_citations(text):
+    results = []
+    for CitationType in master_config.get("CitationClasses", []):
+        found = CitationType.collect_instances(text)
+        results.extend(found)
+    return results
 
-        found_citation_instances = CitationType.collect_instances(text)
-        if found_citation_instances:
-            for current_citation in found_citation_instances:
-                result_text += f"✅ {CitationType} Match: {current_citation}\n"
-        else:
-            result_text += f'❌ {CitationType}:{current_citation}'
-        result_text += '-----------------\n'
-    print(result_text)
 
-def response_to_smartdict(response):
-    from collections import OrderedDict
+# === Test Routines ===
 
-    sd = SmartDict()
-    sd["status_code"] = response.status_code
-    sd["headers"] = SmartDict(response.headers)
-    sd["url"] = response.url
-    sd["reason"] = response.reason
-    sd["elapsed"] = str(response.elapsed)
-    sd["encoding"] = response.encoding
-    sd["ok"] = response.ok
-    sd["history"] = [str(r) for r in response.history]
-    sd["cookies"] = SmartDict(response.cookies.get_dict())
-    try:
-        sd["json"] = SmartDict(response.json())
-    except Exception as e:
-        sd["text"] = response.text[:1000]  # truncate for safety
-        sd["json_error"] = str(e)
-    return sd
+def validate_unit_test_citations(file_path):
+    logger.info(f"Validating citations from: {file_path}")
+    with open(file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
 
-def lookup_citation(citation):
-    url = "https://www.courtlistener.com/api/rest/v4/search/"
-    params = {
-        "q": citation,
-    }
-    headers = {
-        "Accept": "application/json"
-    }
-
-    # Optional: include token if available
-    token = os.getenv('COURTLISTENER_KEY')
-    if token:
-        headers["Authorization"] = f"Token {token}"
-
-    logging.debug(f'url={url}')
-    logging.debug(f'params={params}')
-    logging.debug(f'headers={headers}')
-    logging.debug('GETTING...')
-    response = requests.get(url, params=params, headers=headers)
-    details = response_to_smartdict(response)
-    logging.debug(details.bannerize())
-    return details
-
-def perform_lookup_test():
-    filename = unit_test_citations
-    with open(filename, 'r', encoding='utf-8') as f:
-        file_lines = f.readlines()
-
-    for line in file_lines:
+    current_section = None
+    for line in lines:
         line = line.strip()
-        if not line or line.startswith('#'):
-            logging.debug(f'comment: {line}')
+        if not line or line.startswith("#"):
+            if "GOOD" in line:
+                current_section = "GOOD"
+            elif "BAD" in line:
+                current_section = "BAD"
             continue
 
-        # Extract the citation string from between the asterisks
-        if line.startswith('*') and line.endswith('*'):
-            citation_text = line.strip('*').strip()
-        else:
-            citation_text = line
+        normalized = normalize_text(line)
+        matches = scan_text_for_citations(normalized)
 
-        logging.info(f"Looking up: {citation_text}")
-        result = lookup_citation(citation_text)
+        if not matches:
+            logger.warning(f"❌ No match found: {line}")
+            if current_section == "GOOD":
+                logger.error(f"❌ Expected GOOD match but found none: {line}")
+            continue
 
-        if result:
-            try:
-                citation = result
-                if isinstance(citation, list):
-                    citation = citation[0]
-                citation = citation.get('citation', ['No citation'])
-                if isinstance(citation, list):
-                    citation = citation[0]
-                eq = '\n' + ('=' * 80) + '\n'
-                logging.debug(f'Citation = {eq}{pp(citation)}{eq}')
-                logging.info(f"✅ Found: {result[0].get('case_name', 'Unknown')} — {citation}")
-            except Exception as e:
+        for match in matches:
+            logger.info(f"✅ Matched: {match}", obj=match)
+            result = match.lookup_courtlistener()
+            if result.get("matched"):
+                logger.info(f"🔎 Lookup success: {match}", obj=match)
+            else:
+                logger.warning(f"❌ Lookup failed: {match} — {result}", obj=match)
+                if current_section == "GOOD":
+                    logger.error(f"❌ Expected GOOD match to validate but it failed: {match}", obj=match)
+                if current_section == "BAD":
+                    logger.info(f"✅ BAD match correctly failed validation: {match}", obj=match)
 
-                logging.error(f'{e} result={result}')
-        else:
-            logging.error(f"❌ No match found for: {citation_text}")
 
-perform_lookup_test()
+def scan_filing_for_citations(file_path):
+    logger.info(f"Scanning legal filing: {file_path}")
+    with open(file_path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    normalized = normalize_text(text)
+    matches = scan_text_for_citations(normalized)
+
+    if not matches:
+        logger.warning("No citations found in filing.")
+    else:
+        for match in matches:
+            logger.info(f"📌 Found citation: {match}", obj=match)
+            result = match.lookup_courtlistener()
+            if result.get("matched"):
+                logger.info(f"🔎 Lookup success: {match}", obj=match)
+            else:
+                logger.warning(f"❌ Lookup failed: {match} — {result}", obj=match)
+
+
+# === Entry Point ===
+
+if __name__ == "__main__":
+    master_init()
+    validate_unit_test_citations("UnitTestCitations.txt")
+    scan_filing_for_citations("UnitTestFilingWithInvalidCitations.txt")
