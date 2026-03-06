@@ -1,0 +1,25 @@
+-----------------------------------------------------------------
+✅ <CaseCitation: ('United States v. Warshak', '631', 'F.3d', '266')>
+✅ <CaseCitation: ('Burwell v. Hobby Lobby Stores, Inc.', '134', 'S. Ct.', '2751')>
+✅ <CaseCitation: ('Heien v. North Carolina', '135', 'S. Ct.', '530')>
+✅ <CaseCitation: ('Integrity Staffing Solutions, Inc. v. Busk', '135', 'S. Ct.', '513')>
+✅ <CaseCitation: ('Dart Cherokee Basin Operating Co. v. Owens', '135', 'S. Ct.', '547')>
+✅ <CaseCitation: ('United States v. Auernheimer', '748', 'F.3d', '525')>
+✅ <CaseCitation: ('United States v. Newman', '773', 'F.3d', '438')>
+❌ NOT FOUND (expected): <CaseCitation: ('United States v. Smith', '999', 'F.3d', '999')>
+❌ NOT FOUND (expected): <CaseCitation: ('People v. Jones', '123', 'U.S.', '456')>
+❌ NOT FOUND (expected): <CaseCitation: ('Riley v. California', '573', 'F.4th', '373')>
+❌ NOT FOUND (expected): <CaseCitation: ('United States v. Newman', '773', 'F.3d', '9999')>
+❌ NOT FOUND (expected): <CaseCitation: ('United States v. Doe', '000', 'F.3d', '000')>
+❌ NOT FOUND (expected): <CaseCitation: ('United States v. Jones', '565', 'F.3d', '1200')>
+
+Self-test PASSED
+-----------------------------------------------------------------
+❌ <CaseCitation: ('Varghese v. China Southern Airlines', '925', 'F.3d', '1339')>
+❌ <CaseCitation: ('Petersen v. Iran Air', '905', 'F. Supp. 2d', '121')>  (found: United States of America v. Iss Marine Services, Inc.)
+❌ <CaseCitation: ('Miller v. United Airlines, Inc.', '174', 'F.3d', '366')>  (found: Greenleaf v. Garlock, Inc.)
+❌ <CaseCitation: ('Zicherman v. Korean Air Lines Co., Ltd.', '516', 'F.3d', '1237')>
+❌ <IllinoisAppCitation: ('Shaboon v. Egyptair', '2013', '1st', '111279-U')>
+⚪ <UnsupportedCitation: ('2019', '4639462')>  (Westlaw -- requires subscription to validate)
+⚪ <UnsupportedCitation: ('2017', '2418825')>  (Westlaw -- requires subscription to validate)
+-----------------------------------------------------------------
