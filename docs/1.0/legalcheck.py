@@ -40,19 +40,19 @@ def cmd_scan(filepath):
         status = detail.get("status")
         if status == "unsupported":
             logger.info(f"  [unsupported] {c}")
-            out("⚪", f"{c}  (Westlaw -- requires subscription to validate)")
+            out("⚪", c.display(detail))
             unsupported += 1
         elif matched:
             logger.info(f"  [valid]       {c}")
-            out("✅", c)
+            out("✅", c.display(detail))
             passed += 1
         elif status == "mismatch":
             logger.warning(f"  [mismatch]    {c} -- found: {detail['found']}")
-            out("❌", f"{c}  (found: {detail['found']})")
+            out("❌", c.display(detail))
             failed += 1
         else:
             logger.warning(f"  [not found]   {c}")
-            out("❌", c)
+            out("❌", c.display(detail))
             failed += 1
 
     summary = f"{passed} valid, {failed} invalid, {unsupported} unsupported -- {len(citations)} total"

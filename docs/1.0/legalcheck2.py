@@ -90,13 +90,11 @@ def cmd_analyze(filepath):
         status = detail.get("status")
 
         if status == "unsupported":
-            out("⚪", c)
+            out("⚪", c.display(detail))
             continue
 
         if not matched:
-            symbol = "❌"
-            suffix = f"  (found: {detail['found']})" if status == "mismatch" else ""
-            out(symbol, f"{c}{suffix}")
+            out("❌", c.display(detail))
             continue
 
         # Citation coordinates are valid — now analyze usage

@@ -141,6 +141,16 @@ class BaseCitation(ImportedClass):
 
         return True, {"status": "found", "found": found_case_name, "cluster": cluster}
 
+    def display(self, detail):
+        """Return human-readable display string for a citation + validate result."""
+        status = detail.get("status")
+        base = repr(self)
+        if status == "unsupported":
+            return f"{base}  (Westlaw -- requires subscription to validate)"
+        if status == "mismatch":
+            return f"{base}  (found: {detail['found']})"
+        return base
+
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self._raw_text}>"
 
