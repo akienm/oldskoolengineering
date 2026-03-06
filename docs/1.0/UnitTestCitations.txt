@@ -1,10 +1,10 @@
 # File: UnitTestCitations.txt
 # GOOD:
 *United States v. Warshak 631 F.3d 266*
-*Burwell v. Hobby Lobby Stores, Inc., 573 U.S. 682 (2014)*
-*Heien v. North Carolina, 574 U.S. 54 (2014)*
-*Integrity Staffing Solutions, Inc. v. Busk, 574 U.S. 27 (2014)*
-*Dart Cherokee Basin Operating Co. v. Owens, 574 U.S. 81 (2014)*
+*Burwell v. Hobby Lobby Stores, Inc., 134 S. Ct. 2751*
+*Heien v. North Carolina, 135 S. Ct. 530*
+*Integrity Staffing Solutions, Inc. v. Busk, 135 S. Ct. 513*
+*Dart Cherokee Basin Operating Co. v. Owens, 135 S. Ct. 547*
 *United States v. Auernheimer, 748 F.3d 525 (3d Cir. 2014)*
 *United States v. Newman, 773 F.3d 438 (2d Cir. 2014)*
 # BAD:
