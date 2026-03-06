@@ -1,14 +1,10 @@
 {
   "CitationClasses": [
     {
-      "CitationClassName": "GeneralFederalCitation",
+      "CitationClassName": "CaseCitation",
       "SubOf": "BaseCitation",
       "regexes": [
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?[, ]*(\\d+) (F\\.(?:2d|3d|4th)) (\\d+)",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (F\\. Supp\\.? ?2d?) (\\d+)",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (U\\.S\\.) (\\d+)",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (S\\. Ct\\.) (\\d+)",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) (B\\.R\\.) (\\d+)"
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?[, ]*(\\d+) (F\\.(?:2d|3d|4th)|F\\. App'?x\\.?|Fed\\. Appx\\.?|F\\.? Supp\\.?(?: ?2d| ?3d)?|F\\.|U\\.S\\.|S\\. Ct\\.|L\\. Ed\\. 2d|B\\.R\\.|T\\.C\\.|Vet\\. App\\.|Fed\\. Cl\\.|A\\.(?:2d|3d)?|P\\.(?:2d|3d)?|S\\.W\\.(?:2d|3d)?|S\\.E\\.(?:2d|3d)?|N\\.W\\.(?:2d|3d)?|N\\.E\\.(?:2d|3d)?|So\\.(?:2d|3d)?|N\\.Y\\.(?:2d|3d)?|Cal\\.(?:2d|3d|4th|5th)?|Cal\\. App\\.(?:2d|3d|4th|5th)?|Ill\\.(?:2d)?|Tex\\.|Pa\\.(?:(?: Super\\.| Commw\\.| D\\. ?&amp; C\\.?))?|Fla\\.|Ohio St\\.(?:2d|3d)?|Ohio App\\.(?:2d|3d)?|Mich\\.(?:(?: App\\.)?)?|Ga\\.(?:(?: App\\.)?)?|Mass\\.(?:(?: App\\. Ct\\.)?)?|N\\.J\\.(?:(?: Super\\.)?)?|Md\\.(?:(?: App\\.)?)?|Mo\\.(?:(?: App\\.)?)?|Ind\\.(?:(?: App\\.)?)?|Wis\\.(?:2d)?|Minn\\.(?:(?: App\\.)?)?|Kan\\.(?:(?: App\\.)?)?|Neb\\.(?:(?: App\\.)?)?|Or\\.(?:(?: App\\.)?)?|Colo\\.(?:(?: App\\.)?)?|Conn\\.(?:(?: App\\.)?)?|Ala\\.|Miss\\.|Ark\\.|Okla\\.(?:(?: Crim\\. App\\.)?)?|S\\.C\\.|N\\.C\\.(?:(?: App\\.)?)?|Tenn\\.(?:(?: App\\.| Crim\\. App\\.)?)?|Ky\\.(?:(?: App\\.)?)?|La\\.(?:(?: App\\.)?)?|W\\. Va\\.|Del\\.|Ariz\\.(?:(?: App\\.)?)?|Nev\\.|Utah|Mont\\.|Wyo\\.|N\\.D\\.|S\\.D\\.|Idaho|N\\.M\\.|Haw\\.|Alaska|R\\.I\\.|Vt\\.|Me\\.|N\\.H\\.) (\\d+[\\w-]*)"
       ],
       "match_fields": ["case_name", "volume", "reporter", "page"],
       "normalizing_fields": ["case_name", "volume", "reporter", "page"],
@@ -20,12 +16,10 @@
       }
     },
     {
-      "CitationClassName": "StateCitation",
+      "CitationClassName": "IllinoisAppCitation",
       "SubOf": "BaseCitation",
       "regexes": [
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) IL App \\((\\d+[a-z]*)\\) (\\d+[-U]*)",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) ([A-Z][a-z]+\\.) App\\. ?,? ([A-Za-z]+\\. \\d{1,2}, \\d{4})",
-        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d+) ([A-Z][a-z]+\\.3d) (\\d+)"
+        "\\*?([\\w\\s.,&'()\\-]+? v\\. [\\w\\s.,&'()\\-]+?)\\*?, (\\d{4}) IL App \\((\\d+[a-z]*)\\) (\\d+[-U]*)"
       ],
       "match_fields": ["case_name", "volume", "reporter", "page"],
       "normalizing_fields": ["case_name", "volume", "reporter", "page"],
