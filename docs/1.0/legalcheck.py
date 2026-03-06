@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-legalcheck.py - Legal citation scanner and validator
+legalcheck.py - Legal citation scanner and validator (POC1)
 
 Usage:
   python legalcheck.py <filename>              scan a document
@@ -9,161 +9,17 @@ Usage:
 """
 
 import argparse
-import difflib
-import json
-import os
-import re
 import sys
-import unicodedata
-import requests
-
-import logging
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-from amm_diagnostics import get_logger, SmartDict
+from citation_engine import init, scan, normalize, logger, silence_console
 
-logger = get_logger()
-
-# Silence the console handler — keep file log verbose, console gets print() only
-for _h in logger.handlers:
-    if isinstance(_h, logging.StreamHandler) and not isinstance(_h, logging.FileHandler):
-        _h.setLevel(logging.CRITICAL)
+silence_console()
 
 
 def out(symbol, text):
     print(f"{symbol} {text}")
-
-# ── Config / Class Registry ────────────────────────────────────────────────────
-
-CLASS_REGISTRY = "CLASS_REGISTRY"
-master_config = SmartDict()
-master_config[CLASS_REGISTRY] = SmartDict()
-
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
-
-
-# ── Dynamic Class Loader ───────────────────────────────────────────────────────
-
-class ImportedClass(SmartDict):
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        master_config[CLASS_REGISTRY][cls.__name__] = cls
-
-    @classmethod
-    def read_config(cls, config_file=CONFIG_FILE):
-        with open(config_file, "r", encoding="utf-8") as f:
-            config_data = json.load(f, object_pairs_hook=SmartDict)
-        for section, class_defs in config_data.items():
-            master_config[section] = []
-            for class_def in class_defs:
-                name_key = next((k for k in class_def if k.endswith("ClassName")), None)
-                if not name_key:
-                    raise ValueError(f"No ClassName key in: {class_def}")
-                class_name = class_def[name_key]
-                base_class_name = class_def.pop("SubOf", "ImportedClass")
-                base_class = master_config[CLASS_REGISTRY].get(base_class_name)
-                if not base_class:
-                    raise ValueError(f"Unknown base class: {base_class_name}")
-                new_class = type(class_name, (base_class,), dict(class_def))
-                master_config[section].append(new_class)
-                logger.debug(f"Registered: {class_name} (base: {base_class_name})")
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _name_similarity(a, b):
-    """Case-insensitive fuzzy similarity ratio between two case names."""
-    def norm(s):
-        return re.sub(r'[^a-z0-9 ]', '', s.lower().strip())
-    return difflib.SequenceMatcher(None, norm(a), norm(b)).ratio()
-
-
-# ── Base Citation ──────────────────────────────────────────────────────────────
-
-class BaseCitation(ImportedClass):
-    regexes = []
-    match_fields = []
-    normalizing_fields = []
-    lookup = {}
-
-    def __init__(self, match):
-        self.initializing_match = match
-        for i, field in enumerate(self.match_fields):
-            setattr(self, field, match[i])
-        self._raw_text = str(match)
-        self._normalized = SmartDict({
-            self.normalizing_fields[i]: match[i]
-            for i in range(len(self.normalizing_fields))
-        })
-
-    @classmethod
-    def collect_instances(cls, text):
-        results = []
-        seen = set()
-        for regex in cls.regexes:
-            for match in re.findall(regex, text):
-                if isinstance(match, str):
-                    match = (match,)
-                # Dedupe: strip trailing commas/spaces from each field
-                key = (cls.__name__,) + tuple(s.strip().rstrip(',') for s in match)
-                if key not in seen:
-                    seen.add(key)
-                    results.append(cls(match))
-        return results
-
-    def validate(self):
-        """Returns (matched: bool, detail: dict)"""
-        cfg = self.lookup
-        if not cfg or not cfg.get("supported", True):
-            return False, {"status": "unsupported"}
-
-        token = os.getenv(cfg["EnvKeyName"])
-        if not token:
-            return False, {"status": "error", "reason": f"Missing env var {cfg['EnvKeyName']}"}
-
-        payload = {field: self._normalized[field] for field in cfg["ExpectedFields"]}
-        headers = {"Authorization": f"Token {token}"}
-
-        try:
-            response = requests.post(cfg["url"], data=payload, headers=headers, timeout=10)
-        except Exception as e:
-            return False, {"status": "error", "reason": str(e)}
-
-        if response.status_code != 200:
-            return False, {"status": "error", "status_code": response.status_code}
-
-        result = response.json()
-        # CourtListener returns a list. Each entry has a nested 'status' and 'clusters'.
-        # HTTP 200 with status=404 in the body means the citation was not found.
-        if not (isinstance(result, list) and len(result) > 0
-                and result[0].get("status") == 200
-                and len(result[0].get("clusters", [])) > 0):
-            return False, {"status": "not_found"}
-
-        found_case_name = result[0]["clusters"][0].get("case_name", "")
-        searched_name = self._normalized.get("case_name", "")
-        similarity = _name_similarity(searched_name, found_case_name)
-        if similarity < 0.6:
-            return False, {"status": "mismatch", "found": found_case_name, "similarity": similarity}
-
-        return True, {"status": "found", "found": found_case_name}
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self._raw_text}>"
-
-
-# ── Engine ─────────────────────────────────────────────────────────────────────
-
-def normalize(text):
-    return re.sub(r'\s+', ' ', unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii"))
-
-
-def scan(text):
-    results = []
-    for CitationType in master_config.get("CitationClasses", []):
-        results.extend(CitationType.collect_instances(text))
-    return results
 
 
 # ── Scan Mode ─────────────────────────────────────────────────────────────────
@@ -279,8 +135,7 @@ def main():
     )
     args = parser.parse_args()
 
-    ImportedClass.read_config()
-    logger.info("Citation engine ready.")
+    init()
 
     if args.selftest:
         cmd_selftest(args.selftest)
