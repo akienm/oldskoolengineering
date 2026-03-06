@@ -1,0 +1,5 @@
+2026-03-06 15:48:16,094 [DEBUG] :::ImportedClass.read_config(class) Registered: CaseCitation (base: BaseCitation)
+2026-03-06 15:48:16,094 [DEBUG] :::ImportedClass.read_config(class) Registered: IllinoisAppCitation (base: BaseCitation)
+2026-03-06 15:48:16,094 [DEBUG] :::ImportedClass.read_config(class) Registered: UnsupportedCitation (base: BaseCitation)
+2026-03-06 15:48:16,094 [INFO] :::init(function) Citation engine ready.
+2026-03-06 15:48:16,094 [INFO] :::cmd_analyze(function) Analyzing: UnitTestFilingWithInvalidCitations.txt
