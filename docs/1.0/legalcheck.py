@@ -40,7 +40,7 @@ def cmd_scan(filepath):
         status = detail.get("status")
         if status == "unsupported":
             logger.info(f"  [unsupported] {c}")
-            out("⚪", c)
+            out("⚪", f"{c}  (Westlaw -- requires subscription to validate)")
             unsupported += 1
         elif matched:
             logger.info(f"  [valid]       {c}")
