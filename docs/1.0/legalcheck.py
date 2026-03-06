@@ -17,9 +17,22 @@ import sys
 import unicodedata
 import requests
 
+import logging
+
+sys.stdout.reconfigure(encoding='utf-8')
+
 from amm_diagnostics import get_logger, SmartDict
 
 logger = get_logger()
+
+# Silence the console handler — keep file log verbose, console gets print() only
+for _h in logger.handlers:
+    if isinstance(_h, logging.StreamHandler) and not isinstance(_h, logging.FileHandler):
+        _h.setLevel(logging.CRITICAL)
+
+
+def out(symbol, text):
+    print(f"{symbol} {text}")
 
 # ── Config / Class Registry ────────────────────────────────────────────────────
 
@@ -171,19 +184,24 @@ def cmd_scan(filepath):
         status = detail.get("status")
         if status == "unsupported":
             logger.info(f"  [unsupported] {c}")
+            out("⚪", c)
             unsupported += 1
         elif matched:
             logger.info(f"  [valid]       {c}")
+            out("✅", c)
             passed += 1
         elif status == "mismatch":
-            logger.warning(f"  [mismatch]    {c}")
-            logger.warning(f"                ^ found: {detail['found']}")
+            logger.warning(f"  [mismatch]    {c} -- found: {detail['found']}")
+            out("❌", f"{c}  (found: {detail['found']})")
             failed += 1
         else:
             logger.warning(f"  [not found]   {c}")
+            out("❌", c)
             failed += 1
 
-    logger.info(f"Results: {passed} valid, {failed} invalid, {unsupported} unsupported -- {len(citations)} total")
+    summary = f"{passed} valid, {failed} invalid, {unsupported} unsupported -- {len(citations)} total"
+    logger.info(f"Results: {summary}")
+    print(f"\n{summary}")
 
 
 # ── Selftest Mode ─────────────────────────────────────────────────────────────
@@ -219,27 +237,35 @@ def cmd_selftest(filepath):
             matched, detail = c.validate()
             if detail.get("status") == "unsupported":
                 logger.info(f"  [unsupported] {c}")
+                out("⚪", c)
                 continue
             if section == "GOOD":
                 if matched:
                     logger.info(f"  [PASS] GOOD validated: {c}")
+                    out("✅", c)
                 else:
                     logger.error(f"  [FAIL] GOOD failed validation: {c}")
+                    out("❌", c)
                     errors.append(f"GOOD failed: {c}")
             elif section == "BAD":
                 if matched:
                     logger.warning(f"  [FAIL] BAD unexpectedly validated (false positive): {c}")
+                    out("❌", f"UNEXPECTED PASS: {c}")
                     errors.append(f"BAD false positive: {c}")
                 else:
                     logger.info(f"  [PASS] BAD correctly rejected: {c}")
+                    out("✅", f"(correctly rejected) {c}")
 
     if errors:
         logger.error(f"Self-test FAILED -- {len(errors)} error(s):")
+        print(f"\nSelf-test FAILED -- {len(errors)} error(s):")
         for e in errors:
             logger.error(f"  {e}")
+            print(f"  {e}")
         sys.exit(1)
     else:
         logger.info("Self-test PASSED")
+        print("\nSelf-test PASSED")
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
