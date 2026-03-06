@@ -1,0 +1,1 @@
+python legalcheck.py --selftest

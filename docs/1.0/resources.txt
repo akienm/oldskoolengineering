@@ -1,0 +1,8 @@
+https://www.courtlistener.com/
+https://github.com/freelawproject/citation-regexes/blob/main/filters.js
+https://www.courtlistener.com/api/rest/v4/
+https://www.courtlistener.com/api/rest/v4/citation-lookup/
+🥉 OpenLaws API: A Viable Alternative
+Website: https://openlaws.com
+API Docs: https://openlaws.com/api
+Access: Requires registration and token request via form or Slack

@@ -1,2 +1,0 @@
-https://www.courtlistener.com/
-https://github.com/freelawproject/citation-regexes/blob/main/filters.js
