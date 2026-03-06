@@ -1,0 +1,14 @@
+build-essential
+git
+curl
+sqlite3
+python3.12
+python3.12-venv
+python3-pip
+ffmpeg
+libportaudio2
+libportaudiocpp0
+portaudio19-dev
+libssl-dev
+nodejs  # v18.19.1
+npm     # v9.2.0
