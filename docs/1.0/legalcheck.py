@@ -250,11 +250,11 @@ def cmd_selftest(filepath):
             elif section == "BAD":
                 if matched:
                     logger.warning(f"  [FAIL] BAD unexpectedly validated (false positive): {c}")
-                    out("❌", f"UNEXPECTED PASS: {c}")
+                    out("⚠️ ", f"UNEXPECTED PASS: {c}")
                     errors.append(f"BAD false positive: {c}")
                 else:
                     logger.info(f"  [PASS] BAD correctly rejected: {c}")
-                    out("✅", f"(correctly rejected) {c}")
+                    out("❌", f"NOT FOUND (expected): {c}")
 
     if errors:
         logger.error(f"Self-test FAILED -- {len(errors)} error(s):")
